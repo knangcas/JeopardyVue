@@ -10,9 +10,12 @@ export default {
       amt: 25,
       currentPlayer: 0,
       player: "Player ",
-      questions: ["dummy"],
+      questions: [],
+      answers: [],
       categories: [],
       avoidCats: [10,13,21,26,27,29,30,32],
+      questionIDs: [],
+      questionFields:[],
       catList: {
         9: "General Knowledge",
         11: "Entertainment: Film",
@@ -34,7 +37,14 @@ export default {
       clickedText: "",
       selectsText: "",
       amountText: "",
-      currentQuestion: ""
+      questionAmount: 0,
+      currentQuestion: "",
+      currentQno: -1,
+      result: "",
+      answerGiven: false,
+      questionChosen: false,
+      playerMoney: [0,0,0],
+
     }
   },
   methods: {
@@ -76,7 +86,7 @@ export default {
       let sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
       for (let i = 0; i < urls.length; i++ ) {
-        //this.fetchCat(urls[i]);
+        this.fetchCat(urls[i]);
         console.log("waiting")
         await sleep(5500);
       }
@@ -103,6 +113,14 @@ export default {
       return [easy, medium, hard]
     },
 
+    populateAnswer(str) {
+      if (str==="True") {
+        this.answers.push(true);
+      } else if (str==="False") {
+        this.answers.push(false);
+      }
+    },
+
     fetchCat(url) {
 
       fetch(url).then(response => {
@@ -114,6 +132,7 @@ export default {
         if (data.response_code===0) {
           for (let i = 0; i < data.results.length; i++) {
             this.questions.push(data.results[i].question);
+            this.populateAnswer(data.results[i].correct_answer);
           }
 
 
@@ -143,24 +162,67 @@ export default {
     },
 
     playerClicked(num) {
+      if (this.questionChosen===true) {
+        console.log("button disabled");
+        return;
+      }
       let cat = Math.floor(num/10) - 1;
       let question = (num % 10) - 1;
+      let qIndex = (cat*5) + question;
+      let qAmount = (question + 1) * 100
+      this.questionAmount=qAmount
       this.selectsText = "selects " + this.categories[cat];
-      this.amountText = "for $" + ((question+1)*100) + ":";
+      this.amountText = "for $" + qAmount + ":";
       this.currentQuestion = this.questions[(cat*5) + question];
-      console.log(this.selectsText);
-      console.log(this.amountText);
-      console.log(this.currentQuestion);
+      this.currentQno = qIndex;
+      this.questionChosen=true;
       //this.nextPlayer();
+    },
+
+    checkAnswer(qNum, ans) {
+      if (this.currentQno===-1) {
+        return;
+      }
+      this.answerGiven=true;
+
+      this.questionFields[this.currentQno] = "P" + this.currentPlayer;
+      if (ans === this.answers[qNum]) {
+        this.result = "Correct!";
+        this.playerMoney[this.currentPlayer-1] += this.questionAmount;
+        this.questionIDs[this.currentQno] = "grid-item greenBox"
+      } else {
+        this.result = "Incorrect!";
+        this.playerMoney[this.currentPlayer-1] -= this.questionAmount;
+        this.questionIDs[this.currentQno] = "grid-item redBox";
+
+      }
+      this.currentQno=-1;
+      //this.questionChosen=false;
+    },
+    populateQuestionID() {
+      for (let i = 0; i < 20; i++) {
+        this.questionIDs[i] = "grid-item"
+      }
+      let num = 1;
+      for(let i = 0; i < 20; i++) {
+        this.questionFields[i] = "$" + (num * 100);
+        num++;
+        if (num === 6) {
+          num = 1;
+        }
+      }
     }
 
   },
-  emits: ['player'],
+  emits: ['player', 'playerMoney'],
   mounted() {
     console.log("app mounted");
     this.nextPlayer();
     this.setupBox();
+    this.populateQuestionID();
     console.log(this.questions);
+    console.log(this.answers);
+    this.$emit('playerMoney', this.playerMoney);
 
   }
 }
@@ -173,36 +235,56 @@ export default {
     <div class="grid-item cat">{{categories[1]}}</div>
     <div class="grid-item cat">{{categories[2]}}</div>
     <div class="grid-item cat">{{categories[3]}}</div>
-    <div class="grid-item" @click="playerClicked(11)">$100</div>
-    <div class="grid-item">$100</div>
-    <div class="grid-item">$100</div>
-    <div class="grid-item">$100</div>
-    <div class="grid-item">$200</div>
-    <div class="grid-item">$200</div>
-    <div class="grid-item">$200</div>
-    <div class="grid-item">$200</div>
-    <div class="grid-item">$300</div>
-    <div class="grid-item">$300</div>
-    <div class="grid-item">$300</div>
-    <div class="grid-item">$300</div>
-    <div class="grid-item">$400</div>
-    <div class="grid-item">$400</div>
-    <div class="grid-item">$400</div>
-    <div class="grid-item">$400</div>
-    <div class="grid-item">$500</div>
-    <div class="grid-item">$500</div>
-    <div class="grid-item">$500</div>
-    <div class="grid-item">$500</div>
+    <div :class="this.questionIDs[0]" @click="playerClicked(11)"> {{questionFields[0]}} </div>
+    <div :class="this.questionIDs[5]">{{questionFields[5]}}</div>
+    <div :class="this.questionIDs[10]">{{questionFields[10]}}</div>
+    <div :class="this.questionIDs[15]">{{questionFields[15]}}</div>
+    <div :class="this.questionIDs[1]">{{questionFields[1]}}</div>
+    <div :class="this.questionIDs[6]">{{questionFields[6]}}</div>
+    <div :class="this.questionIDs[11]">{{questionFields[11]}}</div>
+    <div :class="this.questionIDs[16]">{{questionFields[16]}}</div>
+    <div :class="this.questionIDs[2]">{{questionFields[2]}}</div>
+    <div :class="this.questionIDs[7]">{{questionFields[7]}}</div>
+    <div :class="this.questionIDs[12]">{{questionFields[12]}}</div>
+    <div :class="this.questionIDs[17]">{{questionFields[17]}}</div>
+    <div :class="this.questionIDs[3]">{{questionFields[3]}}</div>
+    <div :class="this.questionIDs[8]">{{questionFields[8]}}</div>
+    <div :class="this.questionIDs[13]">{{questionFields[13]}}</div>
+    <div :class="this.questionIDs[18]">{{questionFields[18]}}</div>
+    <div :class="this.questionIDs[4]">{{questionFields[4]}}</div>
+    <div :class="this.questionIDs[9]">{{questionFields[9]}}</div>
+    <div :class="this.questionIDs[14]">{{questionFields[14]}}</div>
+    <div :class="this.questionIDs[19]">{{questionFields[19]}}</div>
 
   </div>
+<br>
 
-  {{player}} {{currentPlayer}} {{selectsText}} {{amountText}}
+  <div v-if="questionChosen">
+    {{player}} {{currentPlayer}} {{selectsText}} {{amountText}} <br>
+    {{currentQuestion}}<br>
+  <input type="radio" id="trueRadio" value="true" name="answer" @click="checkAnswer(this.currentQno, true)">
+  <label for="trueRadio"> T r u e </label>
+  <input type="radio" id="falseRadio" value="false" name="answer" @click="checkAnswer(this.currentQno, false)">
+  <label for="falseRadio"> F a l s e</label>
+  <div v-if="answerGiven"> {{result}} </div>
+  </div>
+  <div v-else>
+    Hello {{player}} {{currentPlayer}}, select a question for a dollar amount.
+  </div>
 
 
 
 </template>
 
 <style scoped>
+
+.grid-item.greenBox{
+  color: green;
+}
+
+.grid-item.redBox{
+  color:red;
+}
 
 .grid-container {
   display: grid;

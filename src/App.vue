@@ -7,19 +7,29 @@ export default {
   data() {
     return {
       player: 0,
-      playerText: "Player "
+      playerText: "Player ",
+      playerMoney: []
     }
   },
   components: {
     Title,
     Jeopardy
+  },
+  methods: {
+    dynamicPlayer() {
+      return "player" + this.player;
+    }
   }
 }
 </script>
 
 <template>
-  <div><Title id="topTitle"></Title></div><br><div id="bottomText">{{playerText}} {{player}}'s turn.</div><br>
- <Jeopardy @player="(v)=>this.player=v"></Jeopardy>
+
+  <div><Title id="topTitle"></Title></div><div id="bottomText">{{playerText}} {{player}}'s turn.</div>
+  Player 1: ${{playerMoney[0]}} <br>
+  Player 2: ${{playerMoney[1]}} <br>
+  Player 3: ${{playerMoney[2]}} <br>
+ <Jeopardy @player="(v)=>this.player=v" @player-money="(v)=>this.playerMoney=v"></Jeopardy>
 
 
   </template>

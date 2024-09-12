@@ -44,13 +44,18 @@
             //let col4 = this.getColumn(catArray[3]);
 
         },
-        getColumn(num) {
+        async getColumn(num) {
             let urls = this.buildURL(num);
             console.log(urls);
+            let sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-            setTimeout(this.fetchCat(urls[0]), 10000);
-            setTimeout(this.fetchCat(urls[1]), 10000);
-            setTimeout(this.fetchCat(urls[2]), 10000);
+            for (let i = 0; i < urls.length; i++ ) {
+                //this.fetchCat(urls[i]);
+                console.log("waiting")
+                await sleep(5500);
+            }
+
+        
         
 
         },
@@ -70,7 +75,7 @@
             return [easy, medium, hard]
         },
 
-        fetchCat(url) {
+        async fetchCat(url) {
             
             fetch(url).then(response => {
                 if (!response.ok) {

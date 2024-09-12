@@ -8,7 +8,9 @@ export default {
     return {
       msg: "Hello ",
       amt: 25,
-      questions: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],
+      currentPlayer: 0,
+      player: "Player ",
+      questions: ["dummy"],
       categories: [],
       avoidCats: [10,13,21,26,27,29,30,32],
       catList: {
@@ -28,7 +30,11 @@ export default {
         25: "Art",
         28: "Vehicles",
         31: "Entertainment: Japanese Anime & Manga"
-      }
+      },
+      clickedText: "",
+      selectsText: "",
+      amountText: "",
+      currentQuestion: ""
     }
   },
   methods: {
@@ -70,7 +76,7 @@ export default {
       let sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
       for (let i = 0; i < urls.length; i++ ) {
-        //await this.fetchCat(urls[i]);
+        //this.fetchCat(urls[i]);
         console.log("waiting")
         await sleep(5500);
       }
@@ -97,7 +103,7 @@ export default {
       return [easy, medium, hard]
     },
 
-    async fetchCat(url) {
+    fetchCat(url) {
 
       fetch(url).then(response => {
         if (!response.ok) {
@@ -122,12 +128,40 @@ export default {
 
     delayCall() {
       setTimeout(()=> console.log("waited"), 5500);
+    },
+
+    nextPlayer() {
+      this.currentPlayer++;
+      if (this.currentPlayer===4) {
+        this.currentPlayer =1;
+      }
+      this.currentQuestion = "";
+      this.amountText = "";
+      this.selectsText = "";
+
+      this.$emit('player', this.currentPlayer);
+    },
+
+    playerClicked(num) {
+      let cat = Math.floor(num/10) - 1;
+      let question = (num % 10) - 1;
+      this.selectsText = "selects " + this.categories[cat];
+      this.amountText = "for $" + ((question+1)*100) + ":";
+      this.currentQuestion = this.questions[(cat*5) + question];
+      console.log(this.selectsText);
+      console.log(this.amountText);
+      console.log(this.currentQuestion);
+      //this.nextPlayer();
     }
 
   },
+  emits: ['player'],
   mounted() {
+    console.log("app mounted");
+    this.nextPlayer();
     this.setupBox();
     console.log(this.questions);
+
   }
 }
 </script>
@@ -135,11 +169,11 @@ export default {
 <template>
 
   <div class="grid-container">
-    <div class="grid-item cat">{{categories[0]}}</div>
+    <div class="grid-item cat ">{{categories[0]}}</div>
     <div class="grid-item cat">{{categories[1]}}</div>
     <div class="grid-item cat">{{categories[2]}}</div>
     <div class="grid-item cat">{{categories[3]}}</div>
-    <div class="grid-item">$100</div>
+    <div class="grid-item" @click="playerClicked(11)">$100</div>
     <div class="grid-item">$100</div>
     <div class="grid-item">$100</div>
     <div class="grid-item">$100</div>
@@ -162,6 +196,10 @@ export default {
 
   </div>
 
+  {{player}} {{currentPlayer}} {{selectsText}} {{amountText}}
+
+
+
 </template>
 
 <style scoped>
@@ -171,21 +209,28 @@ export default {
   grid-template-columns: auto auto auto auto;
   padding: 10px;
   background-color: blue;
+  border-radius: 10px
 
 }
 .grid-item {
   background-color: rgba(25, 0, 138, 0.8);
   border: 1px solid rgba(0, 0, 0, 0.8);
   padding: 20px;
-  font-size: 30px;
+  font-size: 2rem;
   text-align: center;
   color: orange;
+  font-family: "Impact",serif;
+  font-weight: lighter;
 }
 .grid-item:hover {
-  background-color: blue
+  background-color: blue;
 }
 
 .grid-item.cat {
-  font-size: 1rem
+  font-size: 1.2rem;
+  color: white;
+  font-weight: lighter;
+  font-family: "Arial Black",serif;
+  height: auto;
 }
 </style>

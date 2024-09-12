@@ -1,14 +1,28 @@
-<script setup>
+<script>
 
-import Jepoardy from './components/Jepoardy.vue';
+import Jeopardy from './components/Jeopardy.vue';
 import Title from './components/Title.vue';
 
+export default {
+  data() {
+    return {
+      player: 0,
+      playerText: "Player "
+    }
+  },
+  components: {
+    Title,
+    Jeopardy
+  }
+}
 </script>
 
 <template>
-  <div><Title id="topTitle"></Title></div><br>
- <Jepoardy></Jepoardy>
-</template>
+  <div><Title id="topTitle"></Title></div><br><div id="bottomText">{{playerText}} {{player}}'s turn.</div><br>
+ <Jeopardy @player="(v)=>this.player=v"></Jeopardy>
+
+
+  </template>
 
 <style scoped>
 header {
@@ -22,6 +36,9 @@ header {
 
 #topTitle {
   display: flex; justify-content: center;
+}
+#bottomText {
+  display: flex; justify-content: left;
 }
 
 @media (min-width: 1024px) {

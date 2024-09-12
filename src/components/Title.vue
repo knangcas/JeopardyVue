@@ -6,8 +6,8 @@
     },
     data() {
         return {
-            msg: "J  E  O  P  A  R  D  Y",
-            amt: 25
+            msg: "src/assets/Jeopardy_logo.png",
+            jeopardyID: "logo"
         }
     },
   }
@@ -15,7 +15,7 @@
 
 <template>
   
-  <h1 class="titleTop">{{ msg }}</h1>
+  <img id="logo" :src="msg" alt="Jeopardy!">
  
 </template>
 
@@ -25,6 +25,11 @@ h1 {
   font-size: 2.6rem;
   top: -10px;
   text-align: center;
+}
+
+#logo {
+  display: flex;
+  justify-content: center;
 }
 
 h3 {

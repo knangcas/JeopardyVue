@@ -21,7 +21,7 @@ header {
 }
 
 #topTitle {
-  align-items: center;
+  display: flex; justify-content: center;
 }
 
 @media (min-width: 1024px) {

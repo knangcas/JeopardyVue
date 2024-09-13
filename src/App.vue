@@ -25,10 +25,10 @@ export default {
 
 <template>
 
-  <div><Title id="topTitle"></Title></div><div id="bottomText">{{playerText}} {{player}}'s turn.</div>
-  Player 1: ${{playerMoney[0]}} <br>
+  <div><Title id="topTitle"></Title></div><div id="bottomText"><!--{{playerText}} {{player}}'s turn.--></div>
+<!--  Player 1: ${{playerMoney[0]}} <br>
   Player 2: ${{playerMoney[1]}} <br>
-  Player 3: ${{playerMoney[2]}} <br>
+  Player 3: ${{playerMoney[2]}} <br>-->
  <Jeopardy @player="(v)=>this.player=v" @player-money="(v)=>this.playerMoney=v"></Jeopardy>
 
 

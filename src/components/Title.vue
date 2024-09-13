@@ -6,7 +6,7 @@
     },
     data() {
         return {
-            msg: "src/assets/Jeopardy_logo.png",
+            logo: "src/assets/Jeopardy_logo.png",
             jeopardyID: "logo"
         }
     },
@@ -14,37 +14,48 @@
 </script>
 
 <template>
-  
-  <img id="logo" :src="msg" alt="Jeopardy!">
+  <div class="grid-container">
+    <div class="grid-item">
+    <img id="logo" :src="logo" alt="Jeopardy!">
+      </div>
+
+    </div>
+
+
  
 </template>
 
 <style scoped>
-h1 {
-  font-weight: 500;
-  font-size: 2.6rem;
-  top: -10px;
+.grid-item{
+  grid-column: 1/4;
+  font-family: "Arial Rounded MT Bold",serif;
+  font-size:1.5rem;
+  color:white;
+  height:auto;
+  justify-content:right;
+
+
+}
+
+
+
+
+
+
+.grid-container {
+  display: grid;
+
+  padding: 10px;
+
+  border-radius: 10px
+
+}
+.grid-item {
+  padding: 20px;
+  font-size: 2rem;
   text-align: center;
-}
-
-#logo {
-  display: flex;
-  justify-content: center;
-}
-
-h3 {
-  font-size: 1.2rem;
-}
-
-.greetings h1,
-.greetings h3 {
-  text-align: center;
-}
-
-@media (min-width: 1024px) {
-  .greetings h1,
-  .greetings h3 {
-    text-align: left;
-  }
+  color: orange;
+  font-family: "Impact",serif;
+  font-weight: lighter;
 }
 </style>

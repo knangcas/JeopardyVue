@@ -10,12 +10,14 @@ export default {
       amt: 25,
       currentPlayer: 0,
       player: "Player ",
-      questions: [],
-      answers: [],
+      questions: ["dummyQ1", "dummyQ2"],
+      answers: [true,false],
       categories: [],
+      usedQuestions:[],
       avoidCats: [10,13,21,26,27,29,30,32],
       questionIDs: [],
       questionFields:[],
+      initialQuestionPicked: false,
       catList: {
         9: "General Knowledge",
         11: "Entertainment: Film",
@@ -86,7 +88,7 @@ export default {
       let sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
       for (let i = 0; i < urls.length; i++ ) {
-        this.fetchCat(urls[i]);
+        //this.fetchCat(urls[i]);
         console.log("waiting")
         await sleep(5500);
       }
@@ -150,6 +152,7 @@ export default {
     },
 
     nextPlayer() {
+      let prevPlayer = this.currentPlayer;
       this.currentPlayer++;
       if (this.currentPlayer===4) {
         this.currentPlayer =1;
@@ -157,24 +160,37 @@ export default {
       this.currentQuestion = "";
       this.amountText = "";
       this.selectsText = "";
-
+      this.result = "";
+      this.questionChosen=false;
       this.$emit('player', this.currentPlayer);
     },
 
+    goAgain() {
+
+    },
+
     playerClicked(num) {
+
       if (this.questionChosen===true) {
+        console.log(this.questionChosen)
         console.log("button disabled");
         return;
       }
       let cat = Math.floor(num/10) - 1;
       let question = (num % 10) - 1;
       let qIndex = (cat*5) + question;
+      if(this.usedQuestions.includes(qIndex)) {
+        console.log("button disabled, question already chosen");
+        return;
+      }
+
       let qAmount = (question + 1) * 100
       this.questionAmount=qAmount
       this.selectsText = "selects " + this.categories[cat];
       this.amountText = "for $" + qAmount + ":";
       this.currentQuestion = this.questions[(cat*5) + question];
       this.currentQno = qIndex;
+      this.usedQuestions.push(qIndex);
       this.questionChosen=true;
       //this.nextPlayer();
     },
@@ -187,16 +203,24 @@ export default {
 
       this.questionFields[this.currentQno] = "P" + this.currentPlayer;
       if (ans === this.answers[qNum]) {
-        this.result = "Correct!";
+        this.result = "Correct! Select another question!";
         this.playerMoney[this.currentPlayer-1] += this.questionAmount;
         this.questionIDs[this.currentQno] = "grid-item greenBox"
+        this.questionChosen=false;
+
+
       } else {
         this.result = "Incorrect!";
         this.playerMoney[this.currentPlayer-1] -= this.questionAmount;
         this.questionIDs[this.currentQno] = "grid-item redBox";
+        this.nextPlayer();
 
       }
       this.currentQno=-1;
+
+      if(this.usedQuestions.length>1) {
+        this.initialQuestionPicked = true;
+      }
       //this.questionChosen=false;
     },
     populateQuestionID() {
@@ -211,6 +235,9 @@ export default {
           num = 1;
         }
       }
+    },
+    playerNegative(num) {
+      return this.playerMoney[num] < 0;
     }
 
   },
@@ -222,6 +249,7 @@ export default {
     this.populateQuestionID();
     console.log(this.questions);
     console.log(this.answers);
+    console.log(this.questionChosen);
     this.$emit('playerMoney', this.playerMoney);
 
   }
@@ -236,10 +264,10 @@ export default {
     <div class="grid-item cat">{{categories[2]}}</div>
     <div class="grid-item cat">{{categories[3]}}</div>
     <div :class="this.questionIDs[0]" @click="playerClicked(11)"> {{questionFields[0]}} </div>
-    <div :class="this.questionIDs[5]">{{questionFields[5]}}</div>
+    <div :class="this.questionIDs[5]" @click="playerClicked(12)">{{questionFields[5]}}</div>
     <div :class="this.questionIDs[10]">{{questionFields[10]}}</div>
     <div :class="this.questionIDs[15]">{{questionFields[15]}}</div>
-    <div :class="this.questionIDs[1]">{{questionFields[1]}}</div>
+    <div :class="this.questionIDs[1]" @click="playerClicked(21)">{{questionFields[1]}}</div>
     <div :class="this.questionIDs[6]">{{questionFields[6]}}</div>
     <div :class="this.questionIDs[11]">{{questionFields[11]}}</div>
     <div :class="this.questionIDs[16]">{{questionFields[16]}}</div>
@@ -256,21 +284,29 @@ export default {
     <div :class="this.questionIDs[14]">{{questionFields[14]}}</div>
     <div :class="this.questionIDs[19]">{{questionFields[19]}}</div>
 
+
+  </div>
+<br>
+  <div class="grid-container">
+    <div class="grid-item playerText"><div v-if="initialQuestionPicked">
+      {{player}} {{currentPlayer}} {{selectsText}} {{amountText}} <br>
+      {{currentQuestion}}<br>
+      <input type="radio" id="trueRadio" value="true" name="answer" @click="checkAnswer(this.currentQno, true)">
+      <label for="trueRadio"> True </label> &nbsp &nbsp
+      <input type="radio" id="falseRadio" value="false" name="answer" @click="checkAnswer(this.currentQno, false)">
+      <label for="falseRadio"> False</label>
+      <div v-if="answerGiven"> {{result}} </div>
+    </div>
+      <div v-else-if="!initialQuestionPicked">
+        Hello {{player}} {{currentPlayer}}, select a question for a dollar amount.
+      </div></div>
+    <div class="grid-item playerScore">
+      <p class="playerTurn">Player {{currentPlayer}}'s turn.</p>
+      Player 1:  {{playerMoney[0]}} dollars <br> Player 2:  {{playerMoney[1]}} dollars <br> Player 3:  {{playerMoney[2]}} dollars</div>
   </div>
 <br>
 
-  <div v-if="questionChosen">
-    {{player}} {{currentPlayer}} {{selectsText}} {{amountText}} <br>
-    {{currentQuestion}}<br>
-  <input type="radio" id="trueRadio" value="true" name="answer" @click="checkAnswer(this.currentQno, true)">
-  <label for="trueRadio"> T r u e </label>
-  <input type="radio" id="falseRadio" value="false" name="answer" @click="checkAnswer(this.currentQno, false)">
-  <label for="falseRadio"> F a l s e</label>
-  <div v-if="answerGiven"> {{result}} </div>
-  </div>
-  <div v-else>
-    Hello {{player}} {{currentPlayer}}, select a question for a dollar amount.
-  </div>
+
 
 
 
@@ -286,9 +322,36 @@ export default {
   color:red;
 }
 
+.grid-item.playerText{
+  grid-column: 1/4;
+  font-family: "Calibri Light", serif;
+  font-size:1.5rem;
+  color:white;
+  height:auto
+
+}
+
+.playerTurn{
+  font-size:1.5rem;
+  color: darksalmon;
+  font-family: Impact,serif;
+}
+
+.grid-item.playerScore{
+  grid-column: 4/5;
+  font-family: "Arial Narrow",serif;
+  font-size:1.1rem;
+  text-align:left;
+  color:white;
+  height:auto;
+}
+
+
+
+
 .grid-container {
   display: grid;
-  grid-template-columns: auto auto auto auto;
+  grid-template-columns: 25% 25% 25% 25%;
   padding: 10px;
   background-color: blue;
   border-radius: 10px

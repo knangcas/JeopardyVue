@@ -46,6 +46,16 @@ export default {
       answerGiven: false,
       questionChosen: false,
       playerMoney: [0,0,0],
+      gameStart: false,
+      percentage: "percentage",
+      loadProgress: 0,
+      loaded:false,
+      status: "Questions loading...",
+      intermediate: false,
+      pickedQuestion: false,
+      answerChoice: undefined,
+      questionsAnswered: 0,
+      chooseDollarCatText: ", choose a category and dollar amount."
 
     }
   },
@@ -68,7 +78,7 @@ export default {
       }
       return catArray;
     },
-    setupBox() {
+    async setupBox() {
       let catArray= this.get4cats();
       for(let i = 0; i < catArray.length; i++) {
         let n = catArray[i];
@@ -76,10 +86,15 @@ export default {
         this.categories[i] = this.catList[stringVersion];
       }
       console.log(this.categories);
-      let col1 = this.getColumn(catArray[0]);
-      //let col2 = this.getColumn(catArray[1]);
-      //let col3 = this.getColumn(catArray[2]);
-      //let col4 = this.getColumn(catArray[3]);
+      //let col1 = await this.getColumn(catArray[0]);
+      //let col2 = await this.getColumn(catArray[1]);
+      //let col3 = await this.getColumn(catArray[2]);
+      //let col4 = await this.getColumn(catArray[3]);
+
+      this.loadProgress=100
+      this.percentage = "percentage ready";
+      this.loaded = true;
+      this.status= "Press start to begin!"
 
     },
     async getColumn(num) {
@@ -91,7 +106,10 @@ export default {
         //this.fetchCat(urls[i]);
         console.log("waiting")
         await sleep(5500);
+        this.loadProgress+=8;
       }
+
+
 
       console.log(this.questions);
 
@@ -160,7 +178,6 @@ export default {
       this.currentQuestion = "";
       this.amountText = "";
       this.selectsText = "";
-      this.result = "";
       this.questionChosen=false;
       this.$emit('player', this.currentPlayer);
     },
@@ -171,11 +188,28 @@ export default {
 
     playerClicked(num) {
 
-      if (this.questionChosen===true) {
+      if (!this.loaded) {
+        console.log("button disabled, game has not started yet");
+        return;
+      }
+
+      if (!this.gameStart) {
+        console.log("button disabled, game has not started yet");
+        return;
+      }
+
+      if (!this.intermediate) {
+        console.log("button disabled, player " + this.currentPlayer + " has not submitted answer an answer.");
+        return;
+      }
+
+
+
+      /*if (this.questionChosen===true) {
         console.log(this.questionChosen)
         console.log("button disabled");
         return;
-      }
+      }*/
       let cat = Math.floor(num/10) - 1;
       let question = (num % 10) - 1;
       let qIndex = (cat*5) + question;
@@ -184,6 +218,9 @@ export default {
         return;
       }
 
+      this.intermediate=false;
+      this.pickedQuestion= true;
+
       let qAmount = (question + 1) * 100
       this.questionAmount=qAmount
       this.selectsText = "selects " + this.categories[cat];
@@ -191,18 +228,29 @@ export default {
       this.currentQuestion = this.questions[(cat*5) + question];
       this.currentQno = qIndex;
       this.usedQuestions.push(qIndex);
-      this.questionChosen=true;
+      //this.questionChosen=true;
       //this.nextPlayer();
     },
 
     checkAnswer(qNum, ans) {
+
+      if (ans === undefined) {
+        console.log("No selection, button disabled");
+        return;
+      }
       if (this.currentQno===-1) {
         return;
       }
+      let choice = undefined;
       this.answerGiven=true;
+      if (ans === "true") {
+        choice = true;
+      } else {
+        choice = false;
+      }
 
       this.questionFields[this.currentQno] = "P" + this.currentPlayer;
-      if (ans === this.answers[qNum]) {
+      if (choice === this.answers[qNum]) {
         this.result = "Correct! Select another question!";
         this.playerMoney[this.currentPlayer-1] += this.questionAmount;
         this.questionIDs[this.currentQno] = "grid-item greenBox"
@@ -210,7 +258,8 @@ export default {
 
 
       } else {
-        this.result = "Incorrect!";
+        let prevPlayer = this.currentPlayer;
+        this.result = "Player " + prevPlayer + " was incorrect!";
         this.playerMoney[this.currentPlayer-1] -= this.questionAmount;
         this.questionIDs[this.currentQno] = "grid-item redBox";
         this.nextPlayer();
@@ -221,8 +270,88 @@ export default {
       if(this.usedQuestions.length>1) {
         this.initialQuestionPicked = true;
       }
+
+      this.intermediate = true;
+      this.pickedQuestion = false;
+      this.questionsAnswered++;
+
+      if (this.questionsAnswered === 20) {
+        this.gameOver();
+      }
       //this.questionChosen=false;
     },
+    gameOver() {
+      this.result = "Game Over";
+      let winner = this.getWinner();
+      if (winner === undefined) {
+        let drawArray = this.getDraw();
+        let drawText = "";
+
+        for (let i = 0; i < drawArray.length; i++) {
+          drawText += drawArray[i] + " ";
+        }
+        this.currentPlayer = "";
+        this.player = "";
+        this.chooseDollarCatText = "The game resulted in a draw between players: " + drawText;
+      } else {
+        winner;
+        this.currentPlayer = winner;
+        this.chooseDollarCatText = " is the winner with $" + this.playerMoney[this.currentPlayer - 1] + "!";
+      }
+
+
+    },
+    getWinner() {
+      let money = this.playerMoney[0];
+      let currentHighestIndex = 0;
+      for(let i = 1; i < this.playerMoney.length; i++) {
+        if (this.playerMoney[i] > money) {
+          currentHighestIndex = i;
+          money = this.playerMoney[i];
+        }
+      }
+
+      if (this.checkTie(currentHighestIndex)) {
+        return undefined;
+      }
+      console.log(this.playerMoney)
+      return currentHighestIndex + 1;
+    },
+
+    checkTie(index) {
+      let money = this.playerMoney[index];
+      let counter = 0;
+      for (let i = 0; i < this.playerMoney.length; i++) {
+        if (this.playerMoney[i] === money && i !== index) {
+          counter++;
+        }
+      }
+
+      return counter > 0;
+
+    },
+    getDraw() {
+      let money = this.playerMoney[0];
+      let currentHighestIndex = 0;
+      for(let i = 1; i < this.playerMoney.length; i++) {
+        if (this.playerMoney[i] > money) {
+          currentHighestIndex = i;
+          money = this.playerMoney[i];
+        }
+      }
+
+      let drawArray=[currentHighestIndex+1];
+      money = this.playerMoney[currentHighestIndex];
+      for (let i = 0; i < this.playerMoney.length; i++) {
+        if (this.playerMoney[i] === money && i !== currentHighestIndex) {
+          drawArray.push(i+1);
+        }
+      }
+
+      return drawArray;
+
+    }
+    ,
     populateQuestionID() {
       for (let i = 0; i < 20; i++) {
         this.questionIDs[i] = "grid-item"
@@ -236,8 +365,10 @@ export default {
         }
       }
     },
-    playerNegative(num) {
-      return this.playerMoney[num] < 0;
+    gameStartButton() {
+      this.gameStart = true;
+      this.intermediate = true;
+      this.result="Welcome! Let's begin!"
     }
 
   },
@@ -259,48 +390,52 @@ export default {
 <template>
 
   <div class="grid-container">
-    <div class="grid-item cat ">{{categories[0]}}</div>
-    <div class="grid-item cat">{{categories[1]}}</div>
-    <div class="grid-item cat">{{categories[2]}}</div>
-    <div class="grid-item cat">{{categories[3]}}</div>
+    <div class="grid-item2 cat ">{{categories[0]}}</div>
+    <div class="grid-item2 cat">{{categories[1]}}</div>
+    <div class="grid-item2 cat">{{categories[2]}}</div>
+    <div class="grid-item2 cat">{{categories[3]}}</div>
     <div :class="this.questionIDs[0]" @click="playerClicked(11)"> {{questionFields[0]}} </div>
-    <div :class="this.questionIDs[5]" @click="playerClicked(12)">{{questionFields[5]}}</div>
-    <div :class="this.questionIDs[10]">{{questionFields[10]}}</div>
-    <div :class="this.questionIDs[15]">{{questionFields[15]}}</div>
-    <div :class="this.questionIDs[1]" @click="playerClicked(21)">{{questionFields[1]}}</div>
-    <div :class="this.questionIDs[6]">{{questionFields[6]}}</div>
-    <div :class="this.questionIDs[11]">{{questionFields[11]}}</div>
-    <div :class="this.questionIDs[16]">{{questionFields[16]}}</div>
-    <div :class="this.questionIDs[2]">{{questionFields[2]}}</div>
-    <div :class="this.questionIDs[7]">{{questionFields[7]}}</div>
-    <div :class="this.questionIDs[12]">{{questionFields[12]}}</div>
-    <div :class="this.questionIDs[17]">{{questionFields[17]}}</div>
-    <div :class="this.questionIDs[3]">{{questionFields[3]}}</div>
-    <div :class="this.questionIDs[8]">{{questionFields[8]}}</div>
-    <div :class="this.questionIDs[13]">{{questionFields[13]}}</div>
-    <div :class="this.questionIDs[18]">{{questionFields[18]}}</div>
-    <div :class="this.questionIDs[4]">{{questionFields[4]}}</div>
-    <div :class="this.questionIDs[9]">{{questionFields[9]}}</div>
-    <div :class="this.questionIDs[14]">{{questionFields[14]}}</div>
-    <div :class="this.questionIDs[19]">{{questionFields[19]}}</div>
+    <div :class="this.questionIDs[5]" @click="playerClicked(21)">{{questionFields[5]}}</div>
+    <div :class="this.questionIDs[10]" @click="playerClicked(31)">{{questionFields[10]}}</div>
+    <div :class="this.questionIDs[15]" @click="playerClicked(41)">{{questionFields[15]}}</div>
+    <div :class="this.questionIDs[1]" @click="playerClicked(12)">{{questionFields[1]}}</div>
+    <div :class="this.questionIDs[6]" @click="playerClicked(22)">{{questionFields[6]}}</div>
+    <div :class="this.questionIDs[11]" @click="playerClicked(32)">{{questionFields[11]}}</div>
+    <div :class="this.questionIDs[16]" @click="playerClicked(42)">{{questionFields[16]}}</div>
+    <div :class="this.questionIDs[2]" @click="playerClicked(13)">{{questionFields[2]}}</div>
+    <div :class="this.questionIDs[7]" @click="playerClicked(23)">{{questionFields[7]}}</div>
+    <div :class="this.questionIDs[12]" @click="playerClicked(33)">{{questionFields[12]}}</div>
+    <div :class="this.questionIDs[17]" @click="playerClicked(43)">{{questionFields[17]}}</div>
+    <div :class="this.questionIDs[3]" @click="playerClicked(14)">{{questionFields[3]}}</div>
+    <div :class="this.questionIDs[8]" @click="playerClicked(24)">{{questionFields[8]}}</div>
+    <div :class="this.questionIDs[13]" @click="playerClicked(34)">{{questionFields[13]}}</div>
+    <div :class="this.questionIDs[18]" @click="playerClicked(44)">{{questionFields[18]}}</div>
+    <div :class="this.questionIDs[4]" @click="playerClicked(15)">{{questionFields[4]}}</div>
+    <div :class="this.questionIDs[9]" @click="playerClicked(25)">{{questionFields[9]}}</div>
+    <div :class="this.questionIDs[14]" @click="playerClicked(35)">{{questionFields[14]}}</div>
+    <div :class="this.questionIDs[19]" @click="playerClicked(45)">{{questionFields[19]}}</div>
 
 
   </div>
 <br>
-  <div class="grid-container">
-    <div class="grid-item playerText"><div v-if="initialQuestionPicked">
+  <div class="grid-container2">
+    <div class="grid-item2 playerText"><div v-if="pickedQuestion">
       {{player}} {{currentPlayer}} {{selectsText}} {{amountText}} <br>
       {{currentQuestion}}<br>
-      <input type="radio" id="trueRadio" value="true" name="answer" @click="checkAnswer(this.currentQno, true)">
+      <input type="radio" id="trueRadio" value="true" v-model="this.answerChoice" name="answer" >
       <label for="trueRadio"> True </label> &nbsp &nbsp
-      <input type="radio" id="falseRadio" value="false" name="answer" @click="checkAnswer(this.currentQno, false)">
-      <label for="falseRadio"> False</label>
-      <div v-if="answerGiven"> {{result}} </div>
+      <input type="radio" id="falseRadio" value="false" v-model="this.answerChoice" name="answer" >
+      <label for="falseRadio"> False </label><br>
+      <button class="actionButton" type="button"  @click="checkAnswer(this.currentQno, this.answerChoice)">Submit</button>
+      <div v-if="answerGiven">  </div>
     </div>
-      <div v-else-if="!initialQuestionPicked">
-        Hello {{player}} {{currentPlayer}}, select a question for a dollar amount.
+
+      <div class="grid-item2 playerText" v-if="intermediate"> {{result}} <br> {{player}} {{currentPlayer}} {{chooseDollarCatText}} </div>
+      <div v-if="!gameStart">
+        Welcome to SER421 Jeopardy! <br> {{status}}<p :class="this.percentage">{{loadProgress}}%</p>
+        <button v-if="loaded" class="actionButton" type="button" @click="gameStartButton()">Start</button>
       </div></div>
-    <div class="grid-item playerScore">
+    <div class="grid-item2 playerScore">
       <p class="playerTurn">Player {{currentPlayer}}'s turn.</p>
       Player 1:  {{playerMoney[0]}} dollars <br> Player 2:  {{playerMoney[1]}} dollars <br> Player 3:  {{playerMoney[2]}} dollars</div>
   </div>
@@ -322,12 +457,41 @@ export default {
   color:red;
 }
 
-.grid-item.playerText{
+.percentage{
+  color:red;
+  font-size: 1.2rem;
+}
+
+.percentage.ready{
+  color:lightgreen;
+  font-size:1.5rem;
+  font-weight: bold;
+}
+
+
+
+.actionButton {
+  color:black;
+  font-family: "Impact",serif;
+  background-color: orange;
+  height:40px;
+  width:100px;
+  font-size: 1.5rem;
+}
+
+.actionButton:hover {
+  color:lightgreen;
+  background-color: forestgreen;
+}
+
+.grid-item2.playerText{
   grid-column: 1/4;
   font-family: "Calibri Light", serif;
   font-size:1.5rem;
   color:white;
-  height:auto
+  height:auto;
+  border-radius: 10px;
+
 
 }
 
@@ -337,13 +501,14 @@ export default {
   font-family: Impact,serif;
 }
 
-.grid-item.playerScore{
+.grid-item2.playerScore{
   grid-column: 4/5;
   font-family: "Arial Narrow",serif;
   font-size:1.1rem;
   text-align:left;
   color:white;
   height:auto;
+  border-radius: 10px
 }
 
 
@@ -355,9 +520,28 @@ export default {
   padding: 10px;
   background-color: blue;
   border-radius: 10px
-
 }
+
+.grid-container2 {
+  display: grid;
+  grid-template-columns: 25% 25% 25% 25%;
+  padding: 10px;
+  background-color: blue;
+  border-radius: 10px
+}
+
 .grid-item {
+  background-color: rgba(25, 0, 138, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  font-size: 2rem;
+  text-align: center;
+  color: orange;
+  font-family: "Impact",serif;
+  font-weight: lighter;
+}
+
+.grid-item2 {
   background-color: rgba(25, 0, 138, 0.8);
   border: 1px solid rgba(0, 0, 0, 0.8);
   padding: 20px;
@@ -371,8 +555,8 @@ export default {
   background-color: blue;
 }
 
-.grid-item.cat {
-  font-size: 1.2rem;
+.grid-item2.cat {
+  font-size: 1.1rem;
   color: white;
   font-weight: lighter;
   font-family: "Arial Black",serif;

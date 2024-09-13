@@ -10,8 +10,8 @@ export default {
       amt: 25,
       currentPlayer: 0,
       player: "Player ",
-      questions: ["dummyQ1", "dummyQ2"],
-      answers: [true,false],
+      questions: [],
+      answers: [],
       categories: [],
       usedQuestions:[],
       avoidCats: [10,13,21,26,27,29,30,32],
@@ -55,7 +55,8 @@ export default {
       pickedQuestion: false,
       answerChoice: undefined,
       questionsAnswered: 0,
-      chooseDollarCatText: ", choose a category and dollar amount."
+      chooseDollarCatText: ", choose a category and dollar amount.",
+      gameEnd : false
 
     }
   },
@@ -86,10 +87,10 @@ export default {
         this.categories[i] = this.catList[stringVersion];
       }
       console.log(this.categories);
-      //let col1 = await this.getColumn(catArray[0]);
-      //let col2 = await this.getColumn(catArray[1]);
-      //let col3 = await this.getColumn(catArray[2]);
-      //let col4 = await this.getColumn(catArray[3]);
+      let col1 = await this.getColumn(catArray[0]);
+      let col2 = await this.getColumn(catArray[1]);
+      let col3 = await this.getColumn(catArray[2]);
+      let col4 = await this.getColumn(catArray[3]);
 
       this.loadProgress=100
       this.percentage = "percentage ready";
@@ -103,9 +104,9 @@ export default {
       let sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
       for (let i = 0; i < urls.length; i++ ) {
-        //this.fetchCat(urls[i]);
+        this.fetchCat(urls[i]);
         console.log("waiting")
-        await sleep(5500);
+        await sleep(6750);
         this.loadProgress+=8;
       }
 
@@ -282,6 +283,7 @@ export default {
     },
     gameOver() {
       this.result = "Game Over";
+      this.gameEnd = true;
       let winner = this.getWinner();
       if (winner === undefined) {
         let drawArray = this.getDraw();
@@ -421,7 +423,7 @@ export default {
   <div class="grid-container2">
     <div class="grid-item2 playerText"><div v-if="pickedQuestion">
       {{player}} {{currentPlayer}} {{selectsText}} {{amountText}} <br>
-      {{currentQuestion}}<br>
+      <p v-html="currentQuestion"></p>
       <input type="radio" id="trueRadio" value="true" v-model="this.answerChoice" name="answer" >
       <label for="trueRadio"> True </label> &nbsp &nbsp
       <input type="radio" id="falseRadio" value="false" v-model="this.answerChoice" name="answer" >
@@ -436,7 +438,7 @@ export default {
         <button v-if="loaded" class="actionButton" type="button" @click="gameStartButton()">Start</button>
       </div></div>
     <div class="grid-item2 playerScore">
-      <p class="playerTurn">Player {{currentPlayer}}'s turn.</p>
+      <p class="playerTurn" v-if="!gameEnd">Player {{currentPlayer}}'s turn.</p>
       Player 1:  {{playerMoney[0]}} dollars <br> Player 2:  {{playerMoney[1]}} dollars <br> Player 3:  {{playerMoney[2]}} dollars</div>
   </div>
 <br>

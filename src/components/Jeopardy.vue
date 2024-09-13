@@ -419,7 +419,7 @@ export default {
 
 
   </div>
-<br>
+  <br>
   <div class="grid-container2">
     <div class="grid-item2 playerText"><div v-if="pickedQuestion">
       {{player}} {{currentPlayer}} {{selectsText}} {{amountText}} <br>
@@ -441,7 +441,7 @@ export default {
       <p class="playerTurn" v-if="!gameEnd">Player {{currentPlayer}}'s turn.</p>
       Player 1:  {{playerMoney[0]}} dollars <br> Player 2:  {{playerMoney[1]}} dollars <br> Player 3:  {{playerMoney[2]}} dollars</div>
   </div>
-<br>
+  <br>
 
 
 

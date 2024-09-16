@@ -7,13 +7,16 @@ export default {
   data() {
     return {
       msg: "Hello ",
-      amt: 25,
+      numOfPlayers: 2,
+      numOfCats: 5,
       currentPlayer: 0,
       player: "Player ",
       questions: [],
       answers: [],
       categories: [],
       usedQuestions:[],
+      indexHelper: [],
+      questionHelper: [],
       avoidCats: [10,13,21,26,27,29,30,32],
       questionIDs: [],
       questionFields:[],
@@ -45,8 +48,9 @@ export default {
       result: "",
       answerGiven: false,
       questionChosen: false,
-      playerMoney: [0,0,0],
+      playerMoney: [],
       gameStart: false,
+      firstStart: false,
       percentage: "percentage",
       loadProgress: 0,
       loaded:false,
@@ -56,7 +60,12 @@ export default {
       answerChoice: undefined,
       questionsAnswered: 0,
       chooseDollarCatText: ", choose a category and dollar amount.",
-      gameEnd : false
+      gameEnd : false,
+      columnPercentage: '20% 20% 20% 20% 20%',
+      initialGridStyle: '1/5',
+      initialGridStyle2: 'hidden'
+
+
 
     }
   },
@@ -70,8 +79,9 @@ export default {
     },
     get4cats() {
       let catArray = [];
+      console.log("Number of categories: " + this.numOfCats)
       let cat = this.randomCat();
-      while(catArray.length !== 4) {
+      while(catArray.length !== this.numOfCats) {
         while (catArray.includes(cat)) {
           cat = this.randomCat();
         }
@@ -87,16 +97,33 @@ export default {
         this.categories[i] = this.catList[stringVersion];
       }
       console.log(this.categories);
-      let col1 = await this.getColumn(catArray[0]);
+
+
+
+      // for debugging purposes, when you don't want to call the API.
+      this.dummyQuestions();
+
+
+
+      /*let col1 = await this.getColumn(catArray[0]);
       let col2 = await this.getColumn(catArray[1]);
       let col3 = await this.getColumn(catArray[2]);
       let col4 = await this.getColumn(catArray[3]);
+      */
 
       this.loadProgress=100
       this.percentage = "percentage ready";
       this.loaded = true;
       this.status= "Press start to begin!"
 
+    },
+
+    // fills questions with dummy questions with all answers being true, for debug/testing.
+    dummyQuestions() {
+      for (let i = 0; i < this.numOfCats * 5; i++) {
+        this.questions.push("dummyQuestion" + (i+1));
+        this.answers.push(true);
+      }
     },
     async getColumn(num) {
       let urls = this.buildURL(num);
@@ -173,7 +200,7 @@ export default {
     nextPlayer() {
       let prevPlayer = this.currentPlayer;
       this.currentPlayer++;
-      if (this.currentPlayer===4) {
+      if (this.currentPlayer===this.numOfPlayers+1) {
         this.currentPlayer =1;
       }
       this.currentQuestion = "";
@@ -355,11 +382,11 @@ export default {
     }
     ,
     populateQuestionID() {
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < this.numOfCats * 5; i++) {
         this.questionIDs[i] = "grid-item"
       }
       let num = 1;
-      for(let i = 0; i < 20; i++) {
+      for(let i = 0; i < this.numOfCats * 5; i++) {
         this.questionFields[i] = "$" + (num * 100);
         num++;
         if (num === 6) {
@@ -367,10 +394,70 @@ export default {
         }
       }
     },
+    firstStartButton() {
+      this.firstStart = true;
+      this.setQuestionIndexHelper();
+      this.setGridContainer();
+      this.setPlayerMoney();
+      this.setupBox();
+      this.populateQuestionID();
+      console.log(this.numOfPlayers)
+    },
     gameStartButton() {
       this.gameStart = true;
       this.intermediate = true;
       this.result="Welcome! Let's begin!"
+      this.initialGridStyle = '1/4';
+      this.initialGridStyle2 = 'visible';
+    },
+
+    setQuestionIndexHelper(){
+      //example: categories = 5 produces
+      //indexHelper: [0,5,10,15,20,1,6,11,16,21,2,7,12,17,22,3,8,13,18,23,4,9,14,19,24]
+      //example: categories = 5 produces
+      //questionHelper: [11,21,31,41,51, 12, 22, 32, 42, 52,, 13, 23, 33, 43, 53, 14, 24, 34, 44, 54, 15, 25, 35, 45, 55]
+
+      let cats = this.numOfCats;
+      let indexNum = 0;
+      let indexNum2 = 0;
+      let questionNum = 11
+      let questionNum2 = 11;
+      for (let i = 0; i < 5; i++) {
+        for (let k = 0; k < this.numOfCats; k++) {
+          this.indexHelper.push(indexNum);
+          indexNum += 5
+          this.questionHelper.push(questionNum)
+          questionNum += 10
+        }
+        indexNum2++;
+        indexNum = indexNum2;
+        questionNum2++
+        questionNum = questionNum2
+      }
+
+      console.log(this.indexHelper);
+
+
+    }
+   ,
+    setGridContainer(){
+      let cats = this.numOfCats;
+
+      let percent = 1/cats * 100;
+
+      let stringStyle = ""
+
+      for (let i = 0; i < cats; i++) {
+        stringStyle+=`${percent}% `
+      }
+
+      this.columnPercentage = stringStyle;
+
+    },
+    setPlayerMoney(){
+      for (let i = 0; i < this.numOfPlayers; i++) {
+        this.playerMoney.push(0);
+      }
     }
 
   },
@@ -378,8 +465,7 @@ export default {
   mounted() {
     console.log("app mounted");
     this.nextPlayer();
-    this.setupBox();
-    this.populateQuestionID();
+
     console.log(this.questions);
     console.log(this.answers);
     console.log(this.questionChosen);
@@ -391,12 +477,14 @@ export default {
 
 <template>
 
-  <div class="grid-container">
-    <div class="grid-item2 cat ">{{categories[0]}}</div>
-    <div class="grid-item2 cat">{{categories[1]}}</div>
+  <div id="mainBoard" class="grid-container" v-if="gameStart">
+    <div class="grid-item2 cat" v-for="a, index in categories">{{categories[index]}}</div>
+<!--    <div class="grid-item2 cat">{{categories[1]}}</div>
     <div class="grid-item2 cat">{{categories[2]}}</div>
-    <div class="grid-item2 cat">{{categories[3]}}</div>
-    <div :class="this.questionIDs[0]" @click="playerClicked(11)"> {{questionFields[0]}} </div>
+    <div class="grid-item2 cat">{{categories[3]}}</div>-->
+
+    <div v-for="a, index in questionIDs" @click="playerClicked(questionHelper[index])" :class="this.questionIDs[this.indexHelper[index]]">{{questionFields[indexHelper[index]]}}</div>
+<!--    <div :class="this.questionIDs[0]" @click="playerClicked(11)"> {{questionFields[0]}} </div>
     <div :class="this.questionIDs[5]" @click="playerClicked(21)">{{questionFields[5]}}</div>
     <div :class="this.questionIDs[10]" @click="playerClicked(31)">{{questionFields[10]}}</div>
     <div :class="this.questionIDs[15]" @click="playerClicked(41)">{{questionFields[15]}}</div>
@@ -415,7 +503,7 @@ export default {
     <div :class="this.questionIDs[4]" @click="playerClicked(15)">{{questionFields[4]}}</div>
     <div :class="this.questionIDs[9]" @click="playerClicked(25)">{{questionFields[9]}}</div>
     <div :class="this.questionIDs[14]" @click="playerClicked(35)">{{questionFields[14]}}</div>
-    <div :class="this.questionIDs[19]" @click="playerClicked(45)">{{questionFields[19]}}</div>
+    <div :class="this.questionIDs[19]" @click="playerClicked(45)">{{questionFields[19]}}</div>-->
 
 
   </div>
@@ -433,13 +521,24 @@ export default {
     </div>
 
       <div class="grid-item2 playerText" v-if="intermediate"> {{result}} <br> {{player}} {{currentPlayer}} {{chooseDollarCatText}} </div>
-      <div v-if="!gameStart">
-        Welcome to SER421 Jeopardy! <br> {{status}}<p :class="this.percentage">{{loadProgress}}%</p>
-        <button v-if="loaded" class="actionButton" type="button" @click="gameStartButton()">Start</button>
-      </div></div>
+      <div v-if="!firstStart">
+        Welcome to SER421 Jeopardy!<br>
+        How many players are playing? (2-6)
+        <input v-model="this.numOfPlayers" class="preGame" type="number" min="2" max="6" value="2"><br>
+        How many categories would you like?
+        <input v-model="this.numOfCats" class="preGame" type="number" min="1" value="4"> <br>
+        <button v-if="!firstStart" class="actionButton" type="button" @click="firstStartButton()">Ok</button>
+      </div>
+      <div v-if = "firstStart">
+        <div v-if="!gameStart"> {{status}}<p :class="this.percentage">{{loadProgress}}%</p>
+        <button v-if="!gameStart" class="actionButton" type="button" @click="gameStartButton()">Ok</button></div>
+      </div>
+    </div>
     <div class="grid-item2 playerScore">
+      <div v-if="gameStart">
       <p class="playerTurn" v-if="!gameEnd">Player {{currentPlayer}}'s turn.</p>
-      Player 1:  {{playerMoney[0]}} dollars <br> Player 2:  {{playerMoney[1]}} dollars <br> Player 3:  {{playerMoney[2]}} dollars</div>
+        <p v-for="a, index in playerMoney">Player {{index+1}}: {{playerMoney[index]}} dollars</p></div>
+      </div>
   </div>
   <br>
 
@@ -470,6 +569,13 @@ export default {
   font-weight: bold;
 }
 
+.preGame{
+  width:40px;
+  height: 25px;
+  background-color:orange;
+  border-radius: 5px;
+  border: none;
+}
 
 
 .actionButton {
@@ -479,6 +585,8 @@ export default {
   height:40px;
   width:100px;
   font-size: 1.5rem;
+  border-radius: 5px;
+
 }
 
 .actionButton:hover {
@@ -487,9 +595,9 @@ export default {
 }
 
 .grid-item2.playerText{
-  grid-column: 1/4;
-  font-family: "Calibri Light", serif;
-  font-size:1.5rem;
+  grid-column: v-bind('initialGridStyle');
+  font-family: "Courier New",serif;
+  font-size:1.3rem;
   color:white;
   height:auto;
   border-radius: 10px;
@@ -504,6 +612,7 @@ export default {
 }
 
 .grid-item2.playerScore{
+  visibility : v-bind('initialGridStyle2');
   grid-column: 4/5;
   font-family: "Arial Narrow",serif;
   font-size:1.1rem;
@@ -518,7 +627,7 @@ export default {
 
 .grid-container {
   display: grid;
-  grid-template-columns: 25% 25% 25% 25%;
+  grid-template-columns: v-bind('columnPercentage') ;
   padding: 10px;
   background-color: blue;
   border-radius: 10px
@@ -526,7 +635,7 @@ export default {
 
 .grid-container2 {
   display: grid;
-  grid-template-columns: 25% 25% 25% 25%;
+  grid-template-columns: 25% 25% 25% 25% ;
   padding: 10px;
   background-color: blue;
   border-radius: 10px

@@ -8,7 +8,7 @@ export default {
     return {
       msg: "Hello ",
       numOfPlayers: 2,
-      numOfCats: 5,
+      numOfCats: 4,
       currentPlayer: 0,
       player: "Player ",
       questions: [],
@@ -63,13 +63,230 @@ export default {
       gameEnd : false,
       columnPercentage: '20% 20% 20% 20% 20%',
       initialGridStyle: '1/5',
-      initialGridStyle2: 'hidden'
-
-
+      initialGridStyle2: 'hidden',
+      doubleJeopardy: false,
+      doubleWager: 1,
+      doubleWagerMax: 0,
+      doubleOverMax: false,
 
     }
   },
+
   methods: {
+
+    //game functionality methods--------------------------------------------------------------------------------
+
+    nextPlayer() {
+      let prevPlayer = this.currentPlayer;
+      this.currentPlayer++;
+      if (this.currentPlayer===this.numOfPlayers+1) {
+        this.currentPlayer =1;
+      }
+      this.currentQuestion = "";
+      this.amountText = "";
+      this.selectsText = "";
+      this.questionChosen=false;
+      console.log("Player " + this.currentPlayer + "'s turn");
+    },
+
+    playerClicked(num) {
+      if (!this.loaded) {
+        console.log("button disabled, game has not started yet");
+        return;
+      }
+      if (!this.gameStart) {
+        console.log("button disabled, game has not started yet");
+        return;
+      }
+      if (!this.intermediate) {
+        console.log("button disabled, player " + this.currentPlayer + " has not submitted answer an answer.");
+        return;
+      }
+
+
+      let cat = Math.floor(num/10) - 1;
+      let question = (num % 10) - 1;
+      let qIndex = (cat*5) + question;
+      let qAmount = (question + 1) * 100
+      this.questionAmount=qAmount
+      if(this.usedQuestions.includes(qIndex)) {
+        console.log("button disabled, question already chosen");
+        return;
+      }
+      if (this.rollDoubleJeopardy()) {
+        this.doubleWagerMaxCalc();
+        console.log("Double Jeopardy Activated");
+        this.doubleJeopardy=true;
+        this.$emit('doubleJ', this.doubleJeopardy);
+      }
+
+
+      this.intermediate=false;
+      this.pickedQuestion= true;
+      this.selectsText = "selects " + this.categories[cat];
+      this.amountText = "for $" + qAmount + ":";
+      this.currentQuestion = this.questions[(cat*5) + question];
+      this.currentQno = qIndex;
+      this.usedQuestions.push(qIndex);
+      this.questionIDs[this.currentQno] = "grid-item selectedBox";
+    },
+
+    checkAnswer(qNum, ans) {
+      if (ans === undefined) {
+        console.log("No selection, button disabled");
+        return;
+      }
+      if (this.currentQno===-1) {
+        return;
+      }
+      let choice = undefined;
+      this.answerGiven=true;
+      if (ans === "true") {
+        choice = true;
+      } else {
+        choice = false;
+      }
+      let amt = this.questionAmount;
+      this.questionFields[this.currentQno] = "P" + this.currentPlayer;
+      if (this.doubleJeopardy) {
+        this.checkWager()
+        amt = this.doubleWager;
+
+      }
+      if (choice === this.answers[qNum]) {
+        this.result = "Correct! You won $" + amt + "! Select another question!";
+        this.playerMoney[this.currentPlayer-1] += amt;
+        this.questionIDs[this.currentQno] = "grid-item cat greenBox"
+        this.questionChosen=false;
+      } else {
+        let prevPlayer = this.currentPlayer;
+        this.result = "Player " + prevPlayer + " was incorrect and lost $" + amt +"!";
+        this.playerMoney[this.currentPlayer-1] -= amt;
+        this.questionIDs[this.currentQno] = "grid-item cat redBox";
+        this.nextPlayer();
+      }
+      this.currentQno=-1;
+      if(this.usedQuestions.length>1) {
+        this.initialQuestionPicked = true;
+      }
+      this.intermediate = true;
+      this.pickedQuestion = false;
+      this.questionsAnswered++;
+      if (this.doubleJeopardy) {
+        this.doubleJeopardy = false;
+        this.doubleOverMax = false;
+        this.doubleWager = 0;
+        this.$emit('doubleJ', this.doubleJeopardy);
+      }
+      if (this.questionsAnswered === this.numOfCats * 5) {
+        this.gameOver();
+      }
+    },
+
+    //double jeopardy helpers--------------------------------------------------------------------------------
+
+    rollDoubleJeopardy() {
+      let chance = Math.floor(Math.random() * 101) + 5;
+      let roll = Math.floor(Math.random() * 101)
+      return chance - roll <= 10;
+    },
+
+    doubleWagerMaxCalc() {
+      let playerMoney = this.playerMoney[this.currentPlayer-1]
+      let amount = this.questionAmount;
+      if (playerMoney > amount) {
+        this.doubleWagerMax = playerMoney;
+      } else {
+        this.doubleWagerMax = amount;
+      }
+
+      console.log("Player wager max: " + this.doubleWagerMax);
+    },
+
+    checkWager() {
+      if (this.doubleJeopardy) {
+        if (this.doubleWager > this.doubleWagerMax) {
+          this.doubleOverMax = true;
+          return true;
+        } else {
+          this.doubleOverMax = false;
+          return false;
+        }
+      } else {
+        return false;
+      }
+    },
+
+    //game status methods----------------------------------------------------------------------------------
+
+    gameOver() {
+      this.result = "Game Over";
+      this.gameEnd = true;
+      let winner = this.getWinner();
+      if (winner === undefined) {
+        let drawArray = this.getDraw();
+        let drawText = "";
+        for (let i = 0; i < drawArray.length; i++) {
+          drawText += drawArray[i] + " ";
+        }
+        this.currentPlayer = "";
+        this.player = "";
+        this.chooseDollarCatText = "The game resulted in a draw between players: " + drawText;
+      } else {
+        winner;
+        this.currentPlayer = winner;
+        this.chooseDollarCatText = " is the winner with $" + this.playerMoney[this.currentPlayer - 1] + "!";
+      }
+    },
+
+    getWinner() {
+      let money = this.playerMoney[0];
+      let currentHighestIndex = 0;
+      for(let i = 1; i < this.playerMoney.length; i++) {
+        if (this.playerMoney[i] > money) {
+          currentHighestIndex = i;
+          money = this.playerMoney[i];
+        }
+      }
+      if (this.checkTie(currentHighestIndex)) {
+        return undefined;
+      }
+      console.log(this.playerMoney)
+      return currentHighestIndex + 1;
+    },
+
+    checkTie(index) {
+      let money = this.playerMoney[index];
+      let counter = 0;
+      for (let i = 0; i < this.playerMoney.length; i++) {
+        if (this.playerMoney[i] === money && i !== index) {
+          counter++;
+        }
+      }
+      return counter > 0;
+    },
+
+    getDraw() {
+      let money = this.playerMoney[0];
+      let currentHighestIndex = 0;
+      for(let i = 1; i < this.playerMoney.length; i++) {
+        if (this.playerMoney[i] > money) {
+          currentHighestIndex = i;
+          money = this.playerMoney[i];
+        }
+      }
+      let drawArray=[currentHighestIndex+1];
+      money = this.playerMoney[currentHighestIndex];
+      for (let i = 0; i < this.playerMoney.length; i++) {
+        if (this.playerMoney[i] === money && i !== currentHighestIndex) {
+          drawArray.push(i+1);
+        }
+      }
+      return drawArray;
+    },
+
+    //game setup methods---------------------------------------------------------------------------
+
     randomCat() {
       let rval = Math.floor( Math.random() * (24) + 9);
       while (this.avoidCats.includes(rval)) {
@@ -77,6 +294,7 @@ export default {
       }
       return rval;
     },
+
     get4cats() {
       let catArray = [];
       console.log("Number of categories: " + this.numOfCats)
@@ -89,6 +307,7 @@ export default {
       }
       return catArray;
     },
+
     async setupBox() {
       let catArray= this.get4cats();
       for(let i = 0; i < catArray.length; i++) {
@@ -98,12 +317,12 @@ export default {
       }
       console.log(this.categories);
 
-
-
       // for debugging purposes, when you don't want to call the API.
       this.dummyQuestions();
 
-
+      for (let i = 0; i < this.numOfCats; i++) {
+        //await this.getColumn(catArray[0]);
+      }
 
       /*let col1 = await this.getColumn(catArray[0]);
       let col2 = await this.getColumn(catArray[1]);
@@ -126,24 +345,18 @@ export default {
       }
     },
     async getColumn(num) {
+      let percentage = (Math.round((1/(this.numOfCats * 3))  * 100)).toFixed(0);
       let urls = this.buildURL(num);
       console.log(urls);
       let sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
       for (let i = 0; i < urls.length; i++ ) {
         this.fetchCat(urls[i]);
         console.log("waiting")
-        await sleep(6750);
-        this.loadProgress+=8;
+        await sleep(6750); //extra time to ensure we don't call within 5 second limit
+
+        this.loadProgress+= Number(percentage)
       }
-
-
-
-      console.log(this.questions);
-
-
-
-
+      console.log("loaded category " + num+1);
     },
 
     buildURL(num) {
@@ -153,11 +366,9 @@ export default {
       let urlMediumSuf="&difficulty=medium&type=boolean"
       let urlHardPre="https://opentdb.com/api.php?amount=1&category="
       let urlHardSuf="&difficulty=hard&type=boolean"
-
       let easy = urlEasyPre + num + urlEasySuf;
       let medium = urlMediumPre + num + urlMediumSuf;
       let hard = urlHardPre + num + urlHardSuf;
-
       return [easy, medium, hard]
     },
 
@@ -182,205 +393,41 @@ export default {
             this.questions.push(data.results[i].question);
             this.populateAnswer(data.results[i].correct_answer);
           }
-
-
         } else {
           console.log(data.response_code);
           throw new Error("Error fetching question");
         }
       })
-          .catch(error => console.error(error));;
-
+          .catch(this.fetchRetry(url, 1));
     },
 
-    delayCall() {
-      setTimeout(()=> console.log("waited"), 5500);
-    },
-
-    nextPlayer() {
-      let prevPlayer = this.currentPlayer;
-      this.currentPlayer++;
-      if (this.currentPlayer===this.numOfPlayers+1) {
-        this.currentPlayer =1;
+    async fetchRetry(url, num) {
+      if (num===5){
+        throw new Error("Too many fetch retries");
       }
-      this.currentQuestion = "";
-      this.amountText = "";
-      this.selectsText = "";
-      this.questionChosen=false;
-      this.$emit('player', this.currentPlayer);
-    },
-
-    goAgain() {
-
-    },
-
-    playerClicked(num) {
-
-      if (!this.loaded) {
-        console.log("button disabled, game has not started yet");
-        return;
-      }
-
-      if (!this.gameStart) {
-        console.log("button disabled, game has not started yet");
-        return;
-      }
-
-      if (!this.intermediate) {
-        console.log("button disabled, player " + this.currentPlayer + " has not submitted answer an answer.");
-        return;
-      }
-
-
-
-      /*if (this.questionChosen===true) {
-        console.log(this.questionChosen)
-        console.log("button disabled");
-        return;
-      }*/
-      let cat = Math.floor(num/10) - 1;
-      let question = (num % 10) - 1;
-      let qIndex = (cat*5) + question;
-      if(this.usedQuestions.includes(qIndex)) {
-        console.log("button disabled, question already chosen");
-        return;
-      }
-
-      this.intermediate=false;
-      this.pickedQuestion= true;
-
-      let qAmount = (question + 1) * 100
-      this.questionAmount=qAmount
-      this.selectsText = "selects " + this.categories[cat];
-      this.amountText = "for $" + qAmount + ":";
-      this.currentQuestion = this.questions[(cat*5) + question];
-      this.currentQno = qIndex;
-      this.usedQuestions.push(qIndex);
-      //this.questionChosen=true;
-      //this.nextPlayer();
-    },
-
-    checkAnswer(qNum, ans) {
-
-      if (ans === undefined) {
-        console.log("No selection, button disabled");
-        return;
-      }
-      if (this.currentQno===-1) {
-        return;
-      }
-      let choice = undefined;
-      this.answerGiven=true;
-      if (ans === "true") {
-        choice = true;
-      } else {
-        choice = false;
-      }
-
-      this.questionFields[this.currentQno] = "P" + this.currentPlayer;
-      if (choice === this.answers[qNum]) {
-        this.result = "Correct! Select another question!";
-        this.playerMoney[this.currentPlayer-1] += this.questionAmount;
-        this.questionIDs[this.currentQno] = "grid-item greenBox"
-        this.questionChosen=false;
-
-
-      } else {
-        let prevPlayer = this.currentPlayer;
-        this.result = "Player " + prevPlayer + " was incorrect!";
-        this.playerMoney[this.currentPlayer-1] -= this.questionAmount;
-        this.questionIDs[this.currentQno] = "grid-item redBox";
-        this.nextPlayer();
-
-      }
-      this.currentQno=-1;
-
-      if(this.usedQuestions.length>1) {
-        this.initialQuestionPicked = true;
-      }
-
-      this.intermediate = true;
-      this.pickedQuestion = false;
-      this.questionsAnswered++;
-
-      if (this.questionsAnswered === 20) {
-        this.gameOver();
-      }
-      //this.questionChosen=false;
-    },
-    gameOver() {
-      this.result = "Game Over";
-      this.gameEnd = true;
-      let winner = this.getWinner();
-      if (winner === undefined) {
-        let drawArray = this.getDraw();
-        let drawText = "";
-
-        for (let i = 0; i < drawArray.length; i++) {
-          drawText += drawArray[i] + " ";
+      let sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+      await sleep(6500);
+      await fetch(url).then(response => {
+        if (!response.ok) {
+          throw new Error("Could not fetch category");
         }
-        this.currentPlayer = "";
-        this.player = "";
-        this.chooseDollarCatText = "The game resulted in a draw between players: " + drawText;
-      } else {
-        winner;
-        this.currentPlayer = winner;
-        this.chooseDollarCatText = " is the winner with $" + this.playerMoney[this.currentPlayer - 1] + "!";
-      }
-
-
-    },
-    getWinner() {
-      let money = this.playerMoney[0];
-      let currentHighestIndex = 0;
-      for(let i = 1; i < this.playerMoney.length; i++) {
-        if (this.playerMoney[i] > money) {
-          currentHighestIndex = i;
-          money = this.playerMoney[i];
+        return response.json(); }
+      ).then(data => {
+        if (data.response_code===0) {
+          for (let i = 0; i < data.results.length; i++) {
+            this.questions.push(data.results[i].question);
+            this.populateAnswer(data.results[i].correct_answer);
+          }
+        } else {
+          console.log(data.response_code);
+          throw new Error("Error fetching question");
         }
-      }
-
-      if (this.checkTie(currentHighestIndex)) {
-        return undefined;
-      }
-      console.log(this.playerMoney)
-      return currentHighestIndex + 1;
+      })
+          .catch(this.fetchRetry(url,num+1));
     },
 
-    checkTie(index) {
-      let money = this.playerMoney[index];
-      let counter = 0;
-      for (let i = 0; i < this.playerMoney.length; i++) {
-        if (this.playerMoney[i] === money && i !== index) {
-          counter++;
-        }
-      }
 
-      return counter > 0;
 
-    },
-    getDraw() {
-      let money = this.playerMoney[0];
-      let currentHighestIndex = 0;
-      for(let i = 1; i < this.playerMoney.length; i++) {
-        if (this.playerMoney[i] > money) {
-          currentHighestIndex = i;
-          money = this.playerMoney[i];
-        }
-      }
-
-      let drawArray=[currentHighestIndex+1];
-      money = this.playerMoney[currentHighestIndex];
-      for (let i = 0; i < this.playerMoney.length; i++) {
-        if (this.playerMoney[i] === money && i !== currentHighestIndex) {
-          drawArray.push(i+1);
-        }
-      }
-
-      return drawArray;
-
-    }
-    ,
     populateQuestionID() {
       for (let i = 0; i < this.numOfCats * 5; i++) {
         this.questionIDs[i] = "grid-item"
@@ -394,6 +441,7 @@ export default {
         }
       }
     },
+
     firstStartButton() {
       this.firstStart = true;
       this.setQuestionIndexHelper();
@@ -401,8 +449,9 @@ export default {
       this.setPlayerMoney();
       this.setupBox();
       this.populateQuestionID();
-      console.log(this.numOfPlayers)
+      console.log("Number of Players:" + this.numOfPlayers)
     },
+
     gameStartButton() {
       this.gameStart = true;
       this.intermediate = true;
@@ -417,7 +466,6 @@ export default {
       //example: categories = 5 produces
       //questionHelper: [11,21,31,41,51, 12, 22, 32, 42, 52,, 13, 23, 33, 43, 53, 14, 24, 34, 44, 54, 15, 25, 35, 45, 55]
 
-      let cats = this.numOfCats;
       let indexNum = 0;
       let indexNum2 = 0;
       let questionNum = 11
@@ -434,25 +482,16 @@ export default {
         questionNum2++
         questionNum = questionNum2
       }
+    },
 
-      console.log(this.indexHelper);
-
-
-    }
-   ,
     setGridContainer(){
       let cats = this.numOfCats;
-
       let percent = 1/cats * 100;
-
       let stringStyle = ""
-
       for (let i = 0; i < cats; i++) {
         stringStyle+=`${percent}% `
       }
-
       this.columnPercentage = stringStyle;
-
     },
     setPlayerMoney(){
       for (let i = 0; i < this.numOfPlayers; i++) {
@@ -461,15 +500,11 @@ export default {
     }
 
   },
-  emits: ['player', 'playerMoney'],
+  emits: ['doubleJ'],
   mounted() {
     console.log("app mounted");
     this.nextPlayer();
-
-    console.log(this.questions);
-    console.log(this.answers);
-    console.log(this.questionChosen);
-    this.$emit('playerMoney', this.playerMoney);
+    this.$emit('doubleJ', this.doubleJeopardy);
 
   }
 }
@@ -510,23 +545,27 @@ export default {
   <br>
   <div class="grid-container2">
     <div class="grid-item2 playerText"><div v-if="pickedQuestion">
+      <p id="doubleJeopardy" v-if="doubleJeopardy"> <p id="DJAlert">D O U B L E &nbsp;J E O P A R D Y ! ! !</p>
+        How much would you like to wager?
+        <input type="number" class="wagerGame" value="0" v-model="doubleWager" min="0" @change="checkWager()"> <br>
+        <p v-if="doubleOverMax" class="warning">(You can't wager more than question amount / money amount! (Max: {{doubleWagerMax}})</p></p>
       {{player}} {{currentPlayer}} {{selectsText}} {{amountText}} <br>
       <p v-html="currentQuestion"></p>
       <input type="radio" id="trueRadio" value="true" v-model="this.answerChoice" name="answer" >
       <label for="trueRadio"> True </label> &nbsp &nbsp
       <input type="radio" id="falseRadio" value="false" v-model="this.answerChoice" name="answer" >
       <label for="falseRadio"> False </label><br>
-      <button class="actionButton" type="button"  @click="checkAnswer(this.currentQno, this.answerChoice)">Submit</button>
+      <button :disabled="checkWager()" class="actionButton" type="button"  @click="checkAnswer(this.currentQno, this.answerChoice)">Submit</button>
       <div v-if="answerGiven">  </div>
     </div>
 
       <div class="grid-item2 playerText" v-if="intermediate"> {{result}} <br> {{player}} {{currentPlayer}} {{chooseDollarCatText}} </div>
       <div v-if="!firstStart">
         Welcome to SER421 Jeopardy!<br>
-        How many players are playing? (2-6)
+        Number of players (2-6):
         <input v-model="this.numOfPlayers" class="preGame" type="number" min="2" max="6" value="2"><br>
-        How many categories would you like?
-        <input v-model="this.numOfCats" class="preGame" type="number" min="1" value="4"> <br>
+        Number of categories (1-16):
+        <input v-model="this.numOfCats" class="preGame" type="number" min="1" max="16" value="4"> <br>
         <button v-if="!firstStart" class="actionButton" type="button" @click="firstStartButton()">Ok</button>
       </div>
       <div v-if = "firstStart">
@@ -552,10 +591,27 @@ export default {
 
 .grid-item.greenBox{
   color: green;
+  background-color:midnightblue;
+}
+
+.grid-item.greenBox:hover{
+  color: green;
+  background-color:midnightblue;
 }
 
 .grid-item.redBox{
   color:red;
+  background-color:midnightblue;
+}
+
+.grid-item.redBox:hover{
+  color:red;
+  background-color:midnightblue;
+}
+
+.grid-item.selectedBox{
+  color: black;
+  background-color: deepskyblue;
 }
 
 .percentage{
@@ -575,6 +631,26 @@ export default {
   background-color:orange;
   border-radius: 5px;
   border: none;
+}
+
+.wagerGame{
+  width:60px;
+  height: 25px;
+  background-color:orange;
+  border-radius: 5px;
+  border: none;
+}
+
+#DJAlert{
+  font-family: "Bell MT", serif;
+  font-size: 1.5rem;
+  color: red;
+}
+
+.warning{
+  color:red;
+  font-family: "Arial Narrow",serif;
+  font-size:1rem;
 }
 
 
@@ -629,7 +705,7 @@ export default {
   display: grid;
   grid-template-columns: v-bind('columnPercentage') ;
   padding: 10px;
-  background-color: blue;
+  background-color: mediumblue;
   border-radius: 10px
 }
 
@@ -637,7 +713,7 @@ export default {
   display: grid;
   grid-template-columns: 25% 25% 25% 25% ;
   padding: 10px;
-  background-color: blue;
+  background-color: mediumblue;
   border-radius: 10px
 }
 

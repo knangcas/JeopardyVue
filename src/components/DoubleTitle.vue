@@ -1,28 +1,21 @@
 <script>
-  export default {
-    name: 'Title',
-    props: {
-      doubleJeopardy: true,
-    },
-    data() {
-        return {
-            logo: "src/assets/Jeopardy_logo.png",
-            jeopardyID: "logo",
-        }
-    },
-
-  }
+export default {
+  name: 'DoubleTitle',
+  data() {
+    return {
+      logo: "src/assets/double_jeopardy.png",
+      jeopardyID: "logo",
+    }
+  },
+}
 </script>
 
 <template>
   <div class="grid-container">
     <div class="grid-item">
-    <img id="logo" :src="logo" alt="Jeopardy!">
-      </div>
+      <img id="logo" :src="logo" alt="Jeopardy!">
     </div>
-
-
- 
+  </div>
 </template>
 
 <style scoped>
@@ -36,10 +29,6 @@
 
 
 }
-
-
-
-
 
 
 .grid-container {

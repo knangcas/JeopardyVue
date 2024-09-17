@@ -2,16 +2,16 @@
 
 import Jeopardy from './components/Jeopardy.vue';
 import Title from './components/Title.vue';
+import DoubleTitle from "@/components/DoubleTitle.vue";
 
 export default {
   data() {
     return {
-      player: 0,
-      playerText: "Player ",
-      playerMoney: []
+      doubleJeopardy:false,
     }
   },
   components: {
+    DoubleTitle,
     Title,
     Jeopardy
   },
@@ -25,11 +25,10 @@ export default {
 
 <template>
 
-  <div><Title id="topTitle"></Title></div><div id="bottomText"><!--{{playerText}} {{player}}'s turn.--></div>
-<!--  Player 1: ${{playerMoney[0]}} <br>
-  Player 2: ${{playerMoney[1]}} <br>
-  Player 3: ${{playerMoney[2]}} <br>-->
- <Jeopardy @player="(v)=>this.player=v" @player-money="(v)=>this.playerMoney=v"></Jeopardy>
+  <div><Title v-if="!doubleJeopardy" id="topTitle"></Title>
+    <DoubleTitle v-if="doubleJeopardy" id="topTitle"></DoubleTitle>
+  </div>
+ <Jeopardy id="jp" @doubleJ="(v)=>this.doubleJeopardy=v"></Jeopardy>
 
 
   </template>
@@ -50,6 +49,8 @@ header {
 #bottomText {
   display: flex; justify-content: left;
 }
+
+
 
 @media (min-width: 1024px) {
   header {

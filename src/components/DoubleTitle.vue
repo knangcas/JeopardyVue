@@ -26,18 +26,12 @@ export default {
   color:white;
   height:auto;
   justify-content:right;
-
-
 }
-
 
 .grid-container {
   display: grid;
-
   padding: 10px;
-
   border-radius: 10px
-
 }
 .grid-item {
   padding: 20px;

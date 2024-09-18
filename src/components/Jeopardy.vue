@@ -6,7 +6,6 @@ export default {
   },
   data() {
     return {
-      msg: "Hello ",
       numOfPlayers: 2,
       numOfCats: 4,
       currentPlayer: 0,
@@ -20,7 +19,7 @@ export default {
       avoidCats: [10,13,21,26,27,29,30,32],
       questionIDs: [],
       questionFields:[],
-      initialQuestionPicked: false,
+      playerMoney: [],
       catList: {
         9: "General Knowledge",
         11: "Entertainment: Film",
@@ -39,16 +38,12 @@ export default {
         28: "Vehicles",
         31: "Entertainment: Japanese Anime & Manga"
       },
-      clickedText: "",
       selectsText: "",
       amountText: "",
       questionAmount: 0,
       currentQuestion: "",
       currentQno: -1,
       result: "",
-      answerGiven: false,
-      questionChosen: false,
-      playerMoney: [],
       gameStart: false,
       firstStart: false,
       percentage: "percentage",
@@ -61,23 +56,20 @@ export default {
       questionsAnswered: 0,
       chooseDollarCatText: ", choose a category and dollar amount.",
       gameEnd : false,
-      columnPercentage: '20% 20% 20% 20% 20%',
+      columnPercentage: '25% 25% 25% 25%',
       initialGridStyle: '1/5',
       initialGridStyle2: 'hidden',
       doubleJeopardy: false,
       doubleWager: 1,
       doubleWagerMax: 0,
       doubleOverMax: false,
-
     }
   },
 
   methods: {
-
     //game functionality methods--------------------------------------------------------------------------------
 
     nextPlayer() {
-      let prevPlayer = this.currentPlayer;
       this.currentPlayer++;
       if (this.currentPlayer===this.numOfPlayers+1) {
         this.currentPlayer =1;
@@ -85,7 +77,6 @@ export default {
       this.currentQuestion = "";
       this.amountText = "";
       this.selectsText = "";
-      this.questionChosen=false;
       console.log("Player " + this.currentPlayer + "'s turn");
     },
 
@@ -102,8 +93,6 @@ export default {
         console.log("button disabled, player " + this.currentPlayer + " has not submitted answer an answer.");
         return;
       }
-
-
       let cat = Math.floor(num/10) - 1;
       let question = (num % 10) - 1;
       let qIndex = (cat*5) + question;
@@ -113,14 +102,13 @@ export default {
         console.log("button disabled, question already chosen");
         return;
       }
+      //10% double jeopardy
       if (this.rollDoubleJeopardy()) {
         this.doubleWagerMaxCalc();
         console.log("Double Jeopardy Activated");
         this.doubleJeopardy=true;
         this.$emit('doubleJ', this.doubleJeopardy);
       }
-
-
       this.intermediate=false;
       this.pickedQuestion= true;
       this.selectsText = "selects " + this.categories[cat];
@@ -140,7 +128,6 @@ export default {
         return;
       }
       let choice = undefined;
-      this.answerGiven=true;
       if (ans === "true") {
         choice = true;
       } else {
@@ -151,13 +138,11 @@ export default {
       if (this.doubleJeopardy) {
         this.checkWager()
         amt = this.doubleWager;
-
       }
       if (choice === this.answers[qNum]) {
         this.result = "Correct! You won $" + amt + "! Select another question!";
         this.playerMoney[this.currentPlayer-1] += amt;
         this.questionIDs[this.currentQno] = "grid-item cat greenBox"
-        this.questionChosen=false;
       } else {
         let prevPlayer = this.currentPlayer;
         this.result = "Player " + prevPlayer + " was incorrect and lost $" + amt +"!";
@@ -166,9 +151,6 @@ export default {
         this.nextPlayer();
       }
       this.currentQno=-1;
-      if(this.usedQuestions.length>1) {
-        this.initialQuestionPicked = true;
-      }
       this.intermediate = true;
       this.pickedQuestion = false;
       this.questionsAnswered++;
@@ -186,9 +168,8 @@ export default {
     //double jeopardy helpers--------------------------------------------------------------------------------
 
     rollDoubleJeopardy() {
-      let chance = Math.floor(Math.random() * 101) + 5;
-      let roll = Math.floor(Math.random() * 101)
-      return chance - roll <= 10;
+      let chance = Math.floor(Math.random() * 101);
+      return chance <= 10;
     },
 
     doubleWagerMaxCalc() {
@@ -233,7 +214,6 @@ export default {
         this.player = "";
         this.chooseDollarCatText = "The game resulted in a draw between players: " + drawText;
       } else {
-        winner;
         this.currentPlayer = winner;
         this.chooseDollarCatText = " is the winner with $" + this.playerMoney[this.currentPlayer - 1] + "!";
       }
@@ -295,7 +275,7 @@ export default {
       return rval;
     },
 
-    get4cats() {
+    getCategories() {
       let catArray = [];
       console.log("Number of categories: " + this.numOfCats)
       let cat = this.randomCat();
@@ -309,7 +289,7 @@ export default {
     },
 
     async setupBox() {
-      let catArray= this.get4cats();
+      let catArray= this.getCategories();
       for(let i = 0; i < catArray.length; i++) {
         let n = catArray[i];
         let stringVersion = n.toString();
@@ -317,24 +297,16 @@ export default {
       }
       console.log(this.categories);
 
-      // for debugging purposes, when you don't want to call the API.
-      this.dummyQuestions();
+      //for debugging purposes
+      //this.dummyQuestions();
 
       for (let i = 0; i < this.numOfCats; i++) {
-        //await this.getColumn(catArray[0]);
+        await this.getColumn(catArray[i]);
       }
-
-      /*let col1 = await this.getColumn(catArray[0]);
-      let col2 = await this.getColumn(catArray[1]);
-      let col3 = await this.getColumn(catArray[2]);
-      let col4 = await this.getColumn(catArray[3]);
-      */
-
-      this.loadProgress=100
+      this.loadProgress=100;
       this.percentage = "percentage ready";
       this.loaded = true;
       this.status= "Press start to begin!"
-
     },
 
     // fills questions with dummy questions with all answers being true, for debug/testing.
@@ -344,19 +316,19 @@ export default {
         this.answers.push(true);
       }
     },
+
     async getColumn(num) {
       let percentage = (Math.round((1/(this.numOfCats * 3))  * 100)).toFixed(0);
       let urls = this.buildURL(num);
-      console.log(urls);
       let sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
       for (let i = 0; i < urls.length; i++ ) {
         this.fetchCat(urls[i]);
-        console.log("waiting")
+        console.log("waiting...")
         await sleep(6750); //extra time to ensure we don't call within 5 second limit
-
         this.loadProgress+= Number(percentage)
+        console.log(this.loadProgress + "% loaded")
       }
-      console.log("loaded category " + num+1);
+      console.log("loaded category " + (this.catList[num]));
     },
 
     buildURL(num) {
@@ -381,7 +353,6 @@ export default {
     },
 
     fetchCat(url) {
-
       fetch(url).then(response => {
         if (!response.ok) {
           throw new Error("Could not fetch category");
@@ -398,7 +369,7 @@ export default {
           throw new Error("Error fetching question");
         }
       })
-          .catch(this.fetchRetry(url, 1));
+          .catch();
     },
 
     async fetchRetry(url, num) {
@@ -425,8 +396,6 @@ export default {
       })
           .catch(this.fetchRetry(url,num+1));
     },
-
-
 
     populateQuestionID() {
       for (let i = 0; i < this.numOfCats * 5; i++) {
@@ -464,8 +433,7 @@ export default {
       //example: categories = 5 produces
       //indexHelper: [0,5,10,15,20,1,6,11,16,21,2,7,12,17,22,3,8,13,18,23,4,9,14,19,24]
       //example: categories = 5 produces
-      //questionHelper: [11,21,31,41,51, 12, 22, 32, 42, 52,, 13, 23, 33, 43, 53, 14, 24, 34, 44, 54, 15, 25, 35, 45, 55]
-
+      //questionHelper: [11,21,31,41,51,12,22,32,42,52,13,23,33,43,53,14,24,34,44,54,15,25,35,45,55]
       let indexNum = 0;
       let indexNum2 = 0;
       let questionNum = 11
@@ -487,7 +455,7 @@ export default {
     setGridContainer(){
       let cats = this.numOfCats;
       let percent = 1/cats * 100;
-      let stringStyle = ""
+      let stringStyle = "";
       for (let i = 0; i < cats; i++) {
         stringStyle+=`${percent}% `
       }
@@ -505,42 +473,14 @@ export default {
     console.log("app mounted");
     this.nextPlayer();
     this.$emit('doubleJ', this.doubleJeopardy);
-
   }
 }
 </script>
 
 <template>
-
   <div id="mainBoard" class="grid-container" v-if="gameStart">
     <div class="grid-item2 cat" v-for="a, index in categories">{{categories[index]}}</div>
-<!--    <div class="grid-item2 cat">{{categories[1]}}</div>
-    <div class="grid-item2 cat">{{categories[2]}}</div>
-    <div class="grid-item2 cat">{{categories[3]}}</div>-->
-
     <div v-for="a, index in questionIDs" @click="playerClicked(questionHelper[index])" :class="this.questionIDs[this.indexHelper[index]]">{{questionFields[indexHelper[index]]}}</div>
-<!--    <div :class="this.questionIDs[0]" @click="playerClicked(11)"> {{questionFields[0]}} </div>
-    <div :class="this.questionIDs[5]" @click="playerClicked(21)">{{questionFields[5]}}</div>
-    <div :class="this.questionIDs[10]" @click="playerClicked(31)">{{questionFields[10]}}</div>
-    <div :class="this.questionIDs[15]" @click="playerClicked(41)">{{questionFields[15]}}</div>
-    <div :class="this.questionIDs[1]" @click="playerClicked(12)">{{questionFields[1]}}</div>
-    <div :class="this.questionIDs[6]" @click="playerClicked(22)">{{questionFields[6]}}</div>
-    <div :class="this.questionIDs[11]" @click="playerClicked(32)">{{questionFields[11]}}</div>
-    <div :class="this.questionIDs[16]" @click="playerClicked(42)">{{questionFields[16]}}</div>
-    <div :class="this.questionIDs[2]" @click="playerClicked(13)">{{questionFields[2]}}</div>
-    <div :class="this.questionIDs[7]" @click="playerClicked(23)">{{questionFields[7]}}</div>
-    <div :class="this.questionIDs[12]" @click="playerClicked(33)">{{questionFields[12]}}</div>
-    <div :class="this.questionIDs[17]" @click="playerClicked(43)">{{questionFields[17]}}</div>
-    <div :class="this.questionIDs[3]" @click="playerClicked(14)">{{questionFields[3]}}</div>
-    <div :class="this.questionIDs[8]" @click="playerClicked(24)">{{questionFields[8]}}</div>
-    <div :class="this.questionIDs[13]" @click="playerClicked(34)">{{questionFields[13]}}</div>
-    <div :class="this.questionIDs[18]" @click="playerClicked(44)">{{questionFields[18]}}</div>
-    <div :class="this.questionIDs[4]" @click="playerClicked(15)">{{questionFields[4]}}</div>
-    <div :class="this.questionIDs[9]" @click="playerClicked(25)">{{questionFields[9]}}</div>
-    <div :class="this.questionIDs[14]" @click="playerClicked(35)">{{questionFields[14]}}</div>
-    <div :class="this.questionIDs[19]" @click="playerClicked(45)">{{questionFields[19]}}</div>-->
-
-
   </div>
   <br>
   <div class="grid-container2">
@@ -556,9 +496,7 @@ export default {
       <input type="radio" id="falseRadio" value="false" v-model="this.answerChoice" name="answer" >
       <label for="falseRadio"> False </label><br>
       <button :disabled="checkWager()" class="actionButton" type="button"  @click="checkAnswer(this.currentQno, this.answerChoice)">Submit</button>
-      <div v-if="answerGiven">  </div>
     </div>
-
       <div class="grid-item2 playerText" v-if="intermediate"> {{result}} <br> {{player}} {{currentPlayer}} {{chooseDollarCatText}} </div>
       <div v-if="!firstStart">
         Welcome to SER421 Jeopardy!<br>
@@ -570,25 +508,19 @@ export default {
       </div>
       <div v-if = "firstStart">
         <div v-if="!gameStart"> {{status}}<p :class="this.percentage">{{loadProgress}}%</p>
-        <button v-if="!gameStart" class="actionButton" type="button" @click="gameStartButton()">Ok</button></div>
+          <button v-if="loaded" class="actionButton" type="button" @click="gameStartButton()">Ok</button></div>
       </div>
     </div>
     <div class="grid-item2 playerScore">
       <div v-if="gameStart">
-      <p class="playerTurn" v-if="!gameEnd">Player {{currentPlayer}}'s turn.</p>
+        <p class="playerTurn" v-if="!gameEnd">Player {{currentPlayer}}'s turn.</p>
         <p v-for="a, index in playerMoney">Player {{index+1}}: {{playerMoney[index]}} dollars</p></div>
-      </div>
+    </div>
   </div>
   <br>
-
-
-
-
-
 </template>
 
 <style scoped>
-
 .grid-item.greenBox{
   color: green;
   background-color:midnightblue;
@@ -642,7 +574,7 @@ export default {
 }
 
 #DJAlert{
-  font-family: "Bell MT", serif;
+  font-family: FreeMono, monospace;
   font-size: 1.5rem;
   color: red;
 }
@@ -653,7 +585,6 @@ export default {
   font-size:1rem;
 }
 
-
 .actionButton {
   color:black;
   font-family: "Impact",serif;
@@ -662,7 +593,6 @@ export default {
   width:100px;
   font-size: 1.5rem;
   border-radius: 5px;
-
 }
 
 .actionButton:hover {
@@ -672,19 +602,17 @@ export default {
 
 .grid-item2.playerText{
   grid-column: v-bind('initialGridStyle');
-  font-family: "Courier New",serif;
+  font-family: "Monaco", monospace;
   font-size:1.3rem;
   color:white;
   height:auto;
   border-radius: 10px;
-
-
 }
 
 .playerTurn{
-  font-size:1.5rem;
+  font-size:1.2rem;
   color: darksalmon;
-  font-family: Impact,serif;
+  font-family: FreeMono, monospace;
 }
 
 .grid-item2.playerScore{
@@ -697,9 +625,6 @@ export default {
   height:auto;
   border-radius: 10px
 }
-
-
-
 
 .grid-container {
   display: grid;

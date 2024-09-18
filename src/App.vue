@@ -24,14 +24,11 @@ export default {
 </script>
 
 <template>
-
   <div><Title v-if="!doubleJeopardy" id="topTitle"></Title>
     <DoubleTitle v-if="doubleJeopardy" id="topTitle"></DoubleTitle>
   </div>
- <Jeopardy id="jp" @doubleJ="(v)=>this.doubleJeopardy=v"></Jeopardy>
-
-
-  </template>
+  <Jeopardy @doubleJ="(v)=>this.doubleJeopardy=v"></Jeopardy>
+</template>
 
 <style scoped>
 header {
@@ -46,21 +43,12 @@ header {
 #topTitle {
   display: flex; justify-content: center;
 }
-#bottomText {
-  display: flex; justify-content: left;
-}
-
-
 
 @media (min-width: 1024px) {
   header {
     display: flex;
     place-items: center;
     padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
   }
 
   header .wrapper {

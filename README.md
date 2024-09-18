@@ -1,29 +1,4 @@
-# lab4ser421
+# Lab 4 SER421
 
-This template should help get you started developing with Vue 3 in Vite.
+This will initially load questions from the API. Each API call is separated by 6750ms. The more categories chosen, the longer the app will take to load.
 
-## Recommended IDE Setup
-
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
-```
-
-### Compile and Minify for Production
-
-```sh
-npm run build
-```

@@ -1,28 +1,24 @@
 <script>
-  export default {
-    name: 'Title',
-    props: {
-      doubleJeopardy: true,
-    },
-    data() {
-        return {
-            logo: "src/assets/Jeopardy_logo.png",
-            jeopardyID: "logo",
-        }
-    },
-
-  }
+export default {
+  name: 'Title',
+  props: {
+    doubleJeopardy: true,
+  },
+  data() {
+    return {
+      logo: "src/assets/Jeopardy_logo.png",
+      jeopardyID: "logo",
+    }
+  },
+}
 </script>
 
 <template>
   <div class="grid-container">
     <div class="grid-item">
-    <img id="logo" :src="logo" alt="Jeopardy!">
-      </div>
+      <img id="logo" :src="logo" alt="Jeopardy!">
     </div>
-
-
- 
+  </div>
 </template>
 
 <style scoped>
@@ -33,22 +29,11 @@
   color:white;
   height:auto;
   justify-content:right;
-
-
 }
-
-
-
-
-
-
 .grid-container {
   display: grid;
-
   padding: 10px;
-
   border-radius: 10px
-
 }
 .grid-item {
   padding: 20px;

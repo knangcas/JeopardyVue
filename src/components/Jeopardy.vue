@@ -6,17 +6,18 @@ export default {
   },
   data() {
     return {
-      msg: "Hello ",
-      amt: 25,
       currentPlayer: 0,
       player: "Player ",
       questions: [],
       answers: [],
       categories: [],
       usedQuestions:[],
+      indexHelper: [],
+      questionHelper: [],
       avoidCats: [10,13,21,26,27,29,30,32],
       questionIDs: [],
       questionFields:[],
+      playerMoney: [0,0,0],
       initialQuestionPicked: false,
       catList: {
         9: "General Knowledge",
@@ -36,16 +37,13 @@ export default {
         28: "Vehicles",
         31: "Entertainment: Japanese Anime & Manga"
       },
-      clickedText: "",
       selectsText: "",
       amountText: "",
       questionAmount: 0,
       currentQuestion: "",
       currentQno: -1,
       result: "",
-      answerGiven: false,
       questionChosen: false,
-      playerMoney: [0,0,0],
       gameStart: false,
       percentage: "percentage",
       loadProgress: 0,
@@ -61,114 +59,8 @@ export default {
     }
   },
   methods: {
-    randomCat() {
-      let rval = Math.floor( Math.random() * (24) + 9);
-      while (this.avoidCats.includes(rval)) {
-        rval = Math.floor( Math.random() * (24) + 9);
-      }
-      return rval;
-    },
-    get4cats() {
-      let catArray = [];
-      let cat = this.randomCat();
-      while(catArray.length !== 4) {
-        while (catArray.includes(cat)) {
-          cat = this.randomCat();
-        }
-        catArray.push(cat);
-      }
-      return catArray;
-    },
-    async setupBox() {
-      let catArray= this.get4cats();
-      for(let i = 0; i < catArray.length; i++) {
-        let n = catArray[i];
-        let stringVersion = n.toString();
-        this.categories[i] = this.catList[stringVersion];
-      }
-      console.log(this.categories);
-      let col1 = await this.getColumn(catArray[0]);
-      let col2 = await this.getColumn(catArray[1]);
-      let col3 = await this.getColumn(catArray[2]);
-      let col4 = await this.getColumn(catArray[3]);
 
-      this.loadProgress=100
-      this.percentage = "percentage ready";
-      this.loaded = true;
-      this.status= "Press start to begin!"
-
-    },
-    async getColumn(num) {
-      let urls = this.buildURL(num);
-      console.log(urls);
-      let sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
-      for (let i = 0; i < urls.length; i++ ) {
-        this.fetchCat(urls[i]);
-        console.log("waiting")
-        await sleep(6750);
-        this.loadProgress+=8;
-      }
-
-
-
-      console.log(this.questions);
-
-
-
-
-    },
-
-    buildURL(num) {
-      let urlEasyPre="https://opentdb.com/api.php?amount=2&category="
-      let urlEasySuf="&difficulty=easy&type=boolean"
-      let urlMediumPre="https://opentdb.com/api.php?amount=2&category="
-      let urlMediumSuf="&difficulty=medium&type=boolean"
-      let urlHardPre="https://opentdb.com/api.php?amount=1&category="
-      let urlHardSuf="&difficulty=hard&type=boolean"
-
-      let easy = urlEasyPre + num + urlEasySuf;
-      let medium = urlMediumPre + num + urlMediumSuf;
-      let hard = urlHardPre + num + urlHardSuf;
-
-      return [easy, medium, hard]
-    },
-
-    populateAnswer(str) {
-      if (str==="True") {
-        this.answers.push(true);
-      } else if (str==="False") {
-        this.answers.push(false);
-      }
-    },
-
-    fetchCat(url) {
-
-      fetch(url).then(response => {
-        if (!response.ok) {
-          throw new Error("Could not fetch category");
-        }
-        return response.json(); }
-      ).then(data => {
-        if (data.response_code===0) {
-          for (let i = 0; i < data.results.length; i++) {
-            this.questions.push(data.results[i].question);
-            this.populateAnswer(data.results[i].correct_answer);
-          }
-
-
-        } else {
-          console.log(data.response_code);
-          throw new Error("Error fetching question");
-        }
-      })
-          .catch(error => console.error(error));;
-
-    },
-
-    delayCall() {
-      setTimeout(()=> console.log("waited"), 5500);
-    },
+    // game logic--------------------------------------------------------------
 
     nextPlayer() {
       let prevPlayer = this.currentPlayer;
@@ -180,37 +72,22 @@ export default {
       this.amountText = "";
       this.selectsText = "";
       this.questionChosen=false;
-      this.$emit('player', this.currentPlayer);
-    },
-
-    goAgain() {
-
     },
 
     playerClicked(num) {
-
       if (!this.loaded) {
         console.log("button disabled, game has not started yet");
         return;
       }
-
       if (!this.gameStart) {
         console.log("button disabled, game has not started yet");
         return;
       }
-
       if (!this.intermediate) {
         console.log("button disabled, player " + this.currentPlayer + " has not submitted answer an answer.");
         return;
       }
 
-
-
-      /*if (this.questionChosen===true) {
-        console.log(this.questionChosen)
-        console.log("button disabled");
-        return;
-      }*/
       let cat = Math.floor(num/10) - 1;
       let question = (num % 10) - 1;
       let qIndex = (cat*5) + question;
@@ -218,10 +95,8 @@ export default {
         console.log("button disabled, question already chosen");
         return;
       }
-
       this.intermediate=false;
       this.pickedQuestion= true;
-
       let qAmount = (question + 1) * 100
       this.questionAmount=qAmount
       this.selectsText = "selects " + this.categories[cat];
@@ -229,8 +104,7 @@ export default {
       this.currentQuestion = this.questions[(cat*5) + question];
       this.currentQno = qIndex;
       this.usedQuestions.push(qIndex);
-      //this.questionChosen=true;
-      //this.nextPlayer();
+      this.questionIDs[this.currentQno] = "grid-item selectedBox";
     },
 
     checkAnswer(qNum, ans) {
@@ -243,44 +117,36 @@ export default {
         return;
       }
       let choice = undefined;
-      this.answerGiven=true;
       if (ans === "true") {
         choice = true;
       } else {
         choice = false;
       }
-
       this.questionFields[this.currentQno] = "P" + this.currentPlayer;
       if (choice === this.answers[qNum]) {
         this.result = "Correct! Select another question!";
         this.playerMoney[this.currentPlayer-1] += this.questionAmount;
         this.questionIDs[this.currentQno] = "grid-item greenBox"
         this.questionChosen=false;
-
-
       } else {
         let prevPlayer = this.currentPlayer;
         this.result = "Player " + prevPlayer + " was incorrect!";
         this.playerMoney[this.currentPlayer-1] -= this.questionAmount;
         this.questionIDs[this.currentQno] = "grid-item redBox";
         this.nextPlayer();
-
       }
       this.currentQno=-1;
-
       if(this.usedQuestions.length>1) {
         this.initialQuestionPicked = true;
       }
-
       this.intermediate = true;
       this.pickedQuestion = false;
       this.questionsAnswered++;
-
       if (this.questionsAnswered === 20) {
         this.gameOver();
       }
-      //this.questionChosen=false;
     },
+
     gameOver() {
       this.result = "Game Over";
       this.gameEnd = true;
@@ -288,7 +154,6 @@ export default {
       if (winner === undefined) {
         let drawArray = this.getDraw();
         let drawText = "";
-
         for (let i = 0; i < drawArray.length; i++) {
           drawText += drawArray[i] + " ";
         }
@@ -300,9 +165,8 @@ export default {
         this.currentPlayer = winner;
         this.chooseDollarCatText = " is the winner with $" + this.playerMoney[this.currentPlayer - 1] + "!";
       }
-
-
     },
+
     getWinner() {
       let money = this.playerMoney[0];
       let currentHighestIndex = 0;
@@ -312,7 +176,6 @@ export default {
           money = this.playerMoney[i];
         }
       }
-
       if (this.checkTie(currentHighestIndex)) {
         return undefined;
       }
@@ -328,10 +191,9 @@ export default {
           counter++;
         }
       }
-
       return counter > 0;
-
     },
+
     getDraw() {
       let money = this.playerMoney[0];
       let currentHighestIndex = 0;
@@ -341,7 +203,6 @@ export default {
           money = this.playerMoney[i];
         }
       }
-
       let drawArray=[currentHighestIndex+1];
       money = this.playerMoney[currentHighestIndex];
       for (let i = 0; i < this.playerMoney.length; i++) {
@@ -349,10 +210,131 @@ export default {
           drawArray.push(i+1);
         }
       }
-
       return drawArray;
+    },
 
+    gameStartButton() {
+      this.gameStart = true;
+      this.intermediate = true;
+      this.result="Welcome! Let's begin!"
+    },
+
+
+    // game setup--------------------------------------------------------------
+
+
+    randomCat() {
+      let rval = Math.floor( Math.random() * (24) + 9);
+      while (this.avoidCats.includes(rval)) {
+        rval = Math.floor( Math.random() * (24) + 9);
+      }
+      return rval;
+    },
+
+    get4cats() {
+      let catArray = [];
+      let cat = this.randomCat();
+      while(catArray.length !== 4) {
+        while (catArray.includes(cat)) {
+          cat = this.randomCat();
+        }
+        catArray.push(cat);
+      }
+      return catArray;
+    },
+
+    async setupBox() {
+      let catArray= this.get4cats();
+      for(let i = 0; i < catArray.length; i++) {
+        let n = catArray[i];
+        let stringVersion = n.toString();
+        this.categories[i] = this.catList[stringVersion];
+      }
+      console.log(this.categories);
+
+      for (let i = 0; i < 4; i++) {
+        //await this.getColumn(catArray[i]);
+      }
+
+
+      this.loadProgress=100
+      this.percentage = "percentage ready";
+      this.loaded = true;
+      this.status= "Press start to begin!"
+    },
+
+    async getColumn(num) {
+      let urls = this.buildURL(num);
+      let sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+      for (let i = 0; i < urls.length; i++ ) {
+        this.fetchCat(urls[i]);
+        console.log("waiting")
+        await sleep(6750);
+        this.loadProgress+=8;
+      }
+      console.log("loaded category " + (this.catList[num]));
+    },
+
+    buildURL(num) {
+      let urlEasyPre="https://opentdb.com/api.php?amount=2&category="
+      let urlEasySuf="&difficulty=easy&type=boolean"
+      let urlMediumPre="https://opentdb.com/api.php?amount=2&category="
+      let urlMediumSuf="&difficulty=medium&type=boolean"
+      let urlHardPre="https://opentdb.com/api.php?amount=1&category="
+      let urlHardSuf="&difficulty=hard&type=boolean"
+      let easy = urlEasyPre + num + urlEasySuf;
+      let medium = urlMediumPre + num + urlMediumSuf;
+      let hard = urlHardPre + num + urlHardSuf;
+      return [easy, medium, hard]
+    },
+
+    populateAnswer(str) {
+      if (str==="True") {
+        this.answers.push(true);
+      } else if (str==="False") {
+        this.answers.push(false);
+      }
+    },
+
+    fetchCat(url) {
+      fetch(url).then(response => {
+        if (!response.ok) {
+          throw new Error("Could not fetch category");
+        }
+        return response.json(); }
+      ).then(data => {
+        if (data.response_code===0) {
+          for (let i = 0; i < data.results.length; i++) {
+            this.questions.push(data.results[i].question);
+            this.populateAnswer(data.results[i].correct_answer);
+          }
+        } else {
+          console.log(data.response_code);
+          throw new Error("Error fetching question");
+        }
+      })
+          .catch(error => console.error(error));
+    },
+
+    setQuestionIndexHelper(){
+      let indexNum = 0;
+      let indexNum2 = 0;
+      let questionNum = 11
+      let questionNum2 = 11;
+      for (let i = 0; i < 5; i++) {
+        for (let k = 0; k < 4; k++) {
+          this.indexHelper.push(indexNum);
+          indexNum += 5
+          this.questionHelper.push(questionNum)
+          questionNum += 10
+        }
+        indexNum2++;
+        indexNum = indexNum2;
+        questionNum2++
+        questionNum = questionNum2
+      }
     }
+
     ,
     populateQuestionID() {
       for (let i = 0; i < 20; i++) {
@@ -367,57 +349,22 @@ export default {
         }
       }
     },
-    gameStartButton() {
-      this.gameStart = true;
-      this.intermediate = true;
-      this.result="Welcome! Let's begin!"
-    }
-
   },
-  emits: ['player', 'playerMoney'],
+
   mounted() {
     console.log("app mounted");
     this.nextPlayer();
     this.setupBox();
+    this.setQuestionIndexHelper();
     this.populateQuestionID();
-    console.log(this.questions);
-    console.log(this.answers);
-    console.log(this.questionChosen);
-    this.$emit('playerMoney', this.playerMoney);
-
   }
 }
 </script>
 
 <template>
-
-  <div class="grid-container">
-    <div class="grid-item2 cat ">{{categories[0]}}</div>
-    <div class="grid-item2 cat">{{categories[1]}}</div>
-    <div class="grid-item2 cat">{{categories[2]}}</div>
-    <div class="grid-item2 cat">{{categories[3]}}</div>
-    <div :class="this.questionIDs[0]" @click="playerClicked(11)"> {{questionFields[0]}} </div>
-    <div :class="this.questionIDs[5]" @click="playerClicked(21)">{{questionFields[5]}}</div>
-    <div :class="this.questionIDs[10]" @click="playerClicked(31)">{{questionFields[10]}}</div>
-    <div :class="this.questionIDs[15]" @click="playerClicked(41)">{{questionFields[15]}}</div>
-    <div :class="this.questionIDs[1]" @click="playerClicked(12)">{{questionFields[1]}}</div>
-    <div :class="this.questionIDs[6]" @click="playerClicked(22)">{{questionFields[6]}}</div>
-    <div :class="this.questionIDs[11]" @click="playerClicked(32)">{{questionFields[11]}}</div>
-    <div :class="this.questionIDs[16]" @click="playerClicked(42)">{{questionFields[16]}}</div>
-    <div :class="this.questionIDs[2]" @click="playerClicked(13)">{{questionFields[2]}}</div>
-    <div :class="this.questionIDs[7]" @click="playerClicked(23)">{{questionFields[7]}}</div>
-    <div :class="this.questionIDs[12]" @click="playerClicked(33)">{{questionFields[12]}}</div>
-    <div :class="this.questionIDs[17]" @click="playerClicked(43)">{{questionFields[17]}}</div>
-    <div :class="this.questionIDs[3]" @click="playerClicked(14)">{{questionFields[3]}}</div>
-    <div :class="this.questionIDs[8]" @click="playerClicked(24)">{{questionFields[8]}}</div>
-    <div :class="this.questionIDs[13]" @click="playerClicked(34)">{{questionFields[13]}}</div>
-    <div :class="this.questionIDs[18]" @click="playerClicked(44)">{{questionFields[18]}}</div>
-    <div :class="this.questionIDs[4]" @click="playerClicked(15)">{{questionFields[4]}}</div>
-    <div :class="this.questionIDs[9]" @click="playerClicked(25)">{{questionFields[9]}}</div>
-    <div :class="this.questionIDs[14]" @click="playerClicked(35)">{{questionFields[14]}}</div>
-    <div :class="this.questionIDs[19]" @click="playerClicked(45)">{{questionFields[19]}}</div>
-
-
+  <div id="mainBoard" class="grid-container">
+    <div class="grid-item2 cat" v-for="a, index in categories">{{categories[index]}}</div>
+    <div v-for="a, index in questionIDs" @click="playerClicked(questionHelper[index])" :class="this.questionIDs[this.indexHelper[index]]">{{questionFields[indexHelper[index]]}}</div>
   </div>
   <br>
   <div class="grid-container2">
@@ -429,9 +376,7 @@ export default {
       <input type="radio" id="falseRadio" value="false" v-model="this.answerChoice" name="answer" >
       <label for="falseRadio"> False </label><br>
       <button class="actionButton" type="button"  @click="checkAnswer(this.currentQno, this.answerChoice)">Submit</button>
-      <div v-if="answerGiven">  </div>
     </div>
-
       <div class="grid-item2 playerText" v-if="intermediate"> {{result}} <br> {{player}} {{currentPlayer}} {{chooseDollarCatText}} </div>
       <div v-if="!gameStart">
         Welcome to SER421 Jeopardy! <br> {{status}}<p :class="this.percentage">{{loadProgress}}%</p>
@@ -442,21 +387,38 @@ export default {
       Player 1:  {{playerMoney[0]}} dollars <br> Player 2:  {{playerMoney[1]}} dollars <br> Player 3:  {{playerMoney[2]}} dollars</div>
   </div>
   <br>
-
-
-
-
-
 </template>
 
 <style scoped>
 
 .grid-item.greenBox{
   color: green;
+  background-color:midnightblue;
+}
+
+.grid-item.greenBox:hover{
+  color: green;
+  background-color:midnightblue;
 }
 
 .grid-item.redBox{
   color:red;
+  background-color:midnightblue;
+}
+
+.grid-item.redBox:hover{
+  color:red;
+  background-color:midnightblue;
+}
+
+.grid-item.selectedBox{
+  color: black;
+  background-color: deepskyblue;
+}
+
+.grid-item.selectedBox:hover{
+  color: black;
+  background-color: deepskyblue;
 }
 
 .percentage{
@@ -488,19 +450,17 @@ export default {
 
 .grid-item2.playerText{
   grid-column: 1/4;
-  font-family: "Calibri Light", serif;
-  font-size:1.5rem;
+  font-family: "Monaco", monospace;
+  font-size:1.3rem;
   color:white;
   height:auto;
   border-radius: 10px;
-
-
 }
 
 .playerTurn{
-  font-size:1.5rem;
+  font-size:1.2rem;
   color: darksalmon;
-  font-family: Impact,serif;
+  font-family: FreeMono, monospace;
 }
 
 .grid-item2.playerScore{
@@ -518,17 +478,17 @@ export default {
 
 .grid-container {
   display: grid;
-  grid-template-columns: 25% 25% 25% 25%;
+  grid-template-columns: 25% 25% 25% 25% ;
   padding: 10px;
-  background-color: blue;
+  background-color: mediumblue;
   border-radius: 10px
 }
 
 .grid-container2 {
   display: grid;
-  grid-template-columns: 25% 25% 25% 25%;
+  grid-template-columns: 25% 25% 25% 25% ;
   padding: 10px;
-  background-color: blue;
+  background-color: mediumblue;
   border-radius: 10px
 }
 

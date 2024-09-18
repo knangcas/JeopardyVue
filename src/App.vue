@@ -29,7 +29,7 @@ export default {
 <!--  Player 1: ${{playerMoney[0]}} <br>
   Player 2: ${{playerMoney[1]}} <br>
   Player 3: ${{playerMoney[2]}} <br>-->
- <Jeopardy @player="(v)=>this.player=v" @player-money="(v)=>this.playerMoney=v"></Jeopardy>
+ <Jeopardy></Jeopardy>
 
 
   </template>

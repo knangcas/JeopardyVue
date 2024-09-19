@@ -20,24 +20,7 @@ export default {
       questionIDs: [],
       questionFields:[],
       playerMoney: [],
-      catList: {
-        9: "General Knowledge",
-        11: "Entertainment: Film",
-        12: "Entertainment: Music",
-        14: "Entertainment: Television",
-        15: "Entertainment: Video Games",
-        16: "Entertainment: Board Games",
-        17: "Science & Nature",
-        18: "Science: Computers",
-        19: "Science: Mathematics",
-        20: "Mythology",
-        22: "Geography",
-        23: "History",
-        24: "Politics",
-        25: "Art",
-        28: "Vehicles",
-        31: "Entertainment: Japanese Anime & Manga"
-      },
+      catList: [],
       selectsText: "",
       amountText: "",
       questionAmount: 0,
@@ -140,7 +123,7 @@ export default {
         amt = this.doubleWager;
       }
       if (choice === this.answers[qNum]) {
-        this.result = "Correct! You won $" + amt + "! Select another question!";
+        this.result = "Correct! Player " + this.currentPlayer + " won $" + amt + "!";
         this.playerMoney[this.currentPlayer-1] += amt;
         this.questionIDs[this.currentQno] = "grid-item cat greenBox"
       } else {
@@ -413,10 +396,10 @@ export default {
 
     firstStartButton() {
       this.firstStart = true;
+      this.fetchCatWrapper();
       this.setQuestionIndexHelper();
       this.setGridContainer();
       this.setPlayerMoney();
-      this.setupBox();
       this.populateQuestionID();
       console.log("Number of Players:" + this.numOfPlayers)
     },
@@ -461,11 +444,42 @@ export default {
       }
       this.columnPercentage = stringStyle;
     },
+
     setPlayerMoney(){
       for (let i = 0; i < this.numOfPlayers; i++) {
         this.playerMoney.push(0);
       }
+    },
+
+    async fetchCatWrapper() {
+      let sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      await this.fetchCats()
+      await sleep(3000);
+      await this.setupBox();
+
+    },
+
+    async fetchCats() {
+      fetch("https://opentdb.com/api_category.php").then(response => {
+        if (!response.ok) {
+          throw new Error("Could not get categories");
+        }
+        return response.json(); }
+      ).then(data => {
+        this.catData = data;
+        for (let i = 0; i < 24; i++) {
+          let id= Number(data.trivia_categories[i].id)
+          if (this.avoidCats.includes(id)) {
+            continue;
+          }
+          let catName = data.trivia_categories[i].name;
+          this.catList[id]=catName;
+        }
+
+      })
+
     }
+
 
   },
   emits: ['doubleJ'],

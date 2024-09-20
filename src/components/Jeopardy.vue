@@ -237,7 +237,7 @@ export default {
       console.log(this.categories);
 
       for (let i = 0; i < 4; i++) {
-        //await this.getColumn(catArray[i]);
+        await this.getColumn(catArray[i]);
       }
 
 

@@ -613,6 +613,11 @@ export default {
   background-color: deepskyblue;
 }
 
+.grid-item.selectedBox:hover{
+  color: black;
+  background-color: deepskyblue;
+}
+
 .percentage{
   color:red;
   font-size: 1.2rem;

@@ -417,6 +417,7 @@ export default {
 .grid-item.greenBox:hover{
   color: green;
   background-color:midnightblue;
+  cursor: not-allowed;
 }
 
 .grid-item.redBox{
@@ -427,6 +428,7 @@ export default {
 .grid-item.redBox:hover{
   color:red;
   background-color:midnightblue;
+  cursor: not-allowed;
 }
 
 .grid-item.selectedBox{
@@ -533,6 +535,7 @@ export default {
 }
 .grid-item:hover {
   background-color: blue;
+  cursor: pointer;
 }
 
 .grid-item2.cat {

@@ -42,10 +42,14 @@ export default {
       columnPercentage: '25% 25% 25% 25%',
       initialGridStyle: '1/5',
       initialGridStyle2: 'hidden',
+      notEnoughForDj: false,
       doubleJeopardy: false,
       doubleWager: 1,
       doubleWagerMax: 0,
       doubleOverMax: false,
+      catFont:  '1.1rem',
+      lessThan0: false,
+      invalidSpec: false,
     }
   },
 
@@ -87,6 +91,9 @@ export default {
       }
       //10% double jeopardy
       if (this.rollDoubleJeopardy()) {
+        if (this.checkBalanceDJ()) {
+          this.notEnoughForDj = true;
+        }
         this.doubleWagerMaxCalc();
         console.log("Double Jeopardy Activated");
         this.doubleJeopardy=true;
@@ -120,7 +127,9 @@ export default {
       this.questionFields[this.currentQno] = "P" + this.currentPlayer;
       if (this.doubleJeopardy) {
         this.checkWager()
-        amt = this.doubleWager;
+        if (!this.notEnoughForDj) {
+          amt = this.doubleWager;
+        }
       }
       if (choice === this.answers[qNum]) {
         this.result = "Correct! Player " + this.currentPlayer + " won $" + amt + "!";
@@ -140,7 +149,9 @@ export default {
       if (this.doubleJeopardy) {
         this.doubleJeopardy = false;
         this.doubleOverMax = false;
+        this.lessThan0 = false;
         this.doubleWager = 0;
+        this.notEnoughForDj = false;
         this.$emit('doubleJ', this.doubleJeopardy);
       }
       if (this.questionsAnswered === this.numOfCats * 5) {
@@ -167,12 +178,20 @@ export default {
       console.log("Player wager max: " + this.doubleWagerMax);
     },
 
+    checkBalanceDJ() {
+      return this.playerMoney[this.currentPlayer-1] < this.questionAmount;
+    },
+
     checkWager() {
       if (this.doubleJeopardy) {
         if (this.doubleWager > this.doubleWagerMax) {
           this.doubleOverMax = true;
           return true;
+        } else if (this.doubleWager < 0 ) {
+          this.lessThan0 = true;
+          return true;
         } else {
+          this.lessThan0 = false;
           this.doubleOverMax = false;
           return false;
         }
@@ -246,6 +265,25 @@ export default {
         }
       }
       return drawArray;
+    },
+
+    validateSpecs() {
+      if (this.numOfCats <=0) {
+        this.invalidSpec = true;
+        return false;
+      } else if (this.numOfCats >16) {
+        this.invalidSpec = true;
+        return false;
+      } else if (this.numOfPlayers <=1) {
+        this.invalidSpec = true;
+        return false;
+      } else if (this.numOfPlayers >6) {
+        this.invalidSpec = true;
+        return false;
+      } else {
+        this.invalidSpec = false;
+        return true;
+      }
     },
 
     //game setup methods---------------------------------------------------------------------------
@@ -401,7 +439,17 @@ export default {
       this.setGridContainer();
       this.setPlayerMoney();
       this.populateQuestionID();
+      this.adjustCatFont();
       console.log("Number of Players:" + this.numOfPlayers)
+    },
+
+    adjustCatFont() {
+      if (this.numOfCats > 8 && this.numOfCats < 12) {
+        this.catFont = '1rem';
+      }
+      if (this.numOfCats >=12) {
+        this.catFont = '0.8rem';
+      }
     },
 
     gameStartButton() {
@@ -499,26 +547,29 @@ export default {
   <br>
   <div class="grid-container2">
     <div class="grid-item2 playerText"><div v-if="pickedQuestion">
-      <p id="doubleJeopardy" v-if="doubleJeopardy"> <p id="DJAlert">D O U B L E &nbsp;J E O P A R D Y ! ! !</p>
+      <div id="doubleJeopardy" v-if="doubleJeopardy"> <p id="DJAlert">D O U B L E &nbsp;J E O P A R D Y ! ! !</p>
         How much would you like to wager?
         <input type="number" class="wagerGame" value="0" v-model="doubleWager" min="0" @change="checkWager()"> <br>
-        <p v-if="doubleOverMax" class="warning">(You can't wager more than question amount / money amount! (Max: {{doubleWagerMax}})</p></p>
+        <p v-if="doubleOverMax" class="warning">(You can't wager more than question amount / money amount! (Max: {{doubleWagerMax}})</p>
+        <p v-if="lessThan0" class="warning">(You can't wager less than 0!)</p></div>
       {{player}} {{currentPlayer}} {{selectsText}} {{amountText}} <br>
       <p v-html="currentQuestion"></p>
       <input type="radio" id="trueRadio" value="true" v-model="this.answerChoice" name="answer" >
       <label for="trueRadio"> True </label> &nbsp &nbsp
       <input type="radio" id="falseRadio" value="false" v-model="this.answerChoice" name="answer" >
       <label for="falseRadio"> False </label><br>
-      <button :disabled="checkWager()" class="actionButton" type="button"  @click="checkAnswer(this.currentQno, this.answerChoice)">Submit</button>
+      <button :disabled="checkWager()" class="actionButton" type="button"  @click="checkAnswer(this.currentQno, this.answerChoice)">Submit</button><br>
+      <p v-if="notEnoughForDj" id="notEnoughDJ">Unfortunately, your balance does not meet the requirements to wager in double jeopardy.</p>
     </div>
       <div class="grid-item2 playerText" v-if="intermediate"> {{result}} <br> {{player}} {{currentPlayer}} {{chooseDollarCatText}} </div>
       <div v-if="!firstStart">
         Welcome to SER421 Jeopardy!<br>
         Number of players (2-6):
-        <input v-model="this.numOfPlayers" class="preGame" type="number" min="2" max="6" value="2"><br>
+        <input v-model="this.numOfPlayers" class="preGame" type="number" min="2" max="6" value="2" @change="validateSpecs"><br>
         Number of categories (1-16):
-        <input v-model="this.numOfCats" class="preGame" type="number" min="1" max="16" value="4"> <br>
-        <button v-if="!firstStart" class="actionButton" type="button" @click="firstStartButton()">Ok</button>
+        <input v-model="this.numOfCats" class="preGame" type="number" min="1" max="16" value="4" @change="validateSpecs"> <br>
+        <button v-if="!firstStart" :disabled="!validateSpecs()" class="actionButton" type="button" @click="firstStartButton()">Ok</button>
+        <p v-if="invalidSpec" class="warning">Invalid quantity of players or categories.</p>
       </div>
       <div v-if = "firstStart">
         <div v-if="!gameStart"> {{status}}<p :class="this.percentage">{{loadProgress}}%</p>
@@ -543,6 +594,7 @@ export default {
 .grid-item.greenBox:hover{
   color: green;
   background-color:midnightblue;
+  cursor: not-allowed;
 }
 
 .grid-item.redBox{
@@ -553,6 +605,7 @@ export default {
 .grid-item.redBox:hover{
   color:red;
   background-color:midnightblue;
+  cursor: not-allowed;
 }
 
 .grid-item.selectedBox{
@@ -569,6 +622,11 @@ export default {
   color:lightgreen;
   font-size:1.5rem;
   font-weight: bold;
+}
+
+#notEnoughDJ{
+  color:red;
+  font-size: 1em;
 }
 
 .preGame{
@@ -679,10 +737,11 @@ export default {
 }
 .grid-item:hover {
   background-color: blue;
+  cursor: pointer;
 }
 
 .grid-item2.cat {
-  font-size: 1.1rem;
+  font-size: v-bind('catFont');
   color: white;
   font-weight: lighter;
   font-family: "Arial Black",serif;

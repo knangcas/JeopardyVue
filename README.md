@@ -10,6 +10,6 @@ Has a chance for "double jeopardy", coded like a "Daily Double"
 Max limit is around 16 because of the width set. 
 
 
-## Customize configuration
+### Disclaimer
 
 This was a class project for web applications class
